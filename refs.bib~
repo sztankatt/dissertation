@@ -1,0 +1,34 @@
+@ARTICLE{Git, 
+AUTHOR = "Bird et al", 
+TITLE = "The Promises and Perils of Mining Git",
+JOURNAL = "Proceedings of the 2009 6th IEEE International Working Conference on Mining Software Repositories",
+YEAR = "2006"
+}
+
+@ARTICLE{SZZ,
+AUTHOR = "Jacek Sliwerski and Thomas Zimermann and Andreas Zeller",
+TITLE = "When Do Changes Induce Fixes?",
+YEAR = "2005"
+}
+
+@ARTICLE{KimZim,
+AUTHOR = "S. Kim, T. Zimmermann and K. Pan",
+TITLE = "Automatic Identification of Bug-Introducing Changes",
+YEAR = "2006",
+JOURNAL = "Proceedings of the
+21st IEEE International Conference on Automated Software
+Engineering (ASE’06)-Volume 00",
+PAGES = "81 -- 90"
+}
+
+@ARTICLE{FixCache, 
+AUTHOR = "S. Kim, T. Zimmermann, E. Whitehead Jr, and A. Zeller",
+TITLE = "Predicting Faults from Cached History",
+YEAR = "2007",
+JOURNAL = "Proceedings of the 29th International Conference on Software Engineering",
+PAGES = "489 -- 498"
+
+@REPORT{Moore95,
+TITLE = "How to prepare a dissertation in LaTeX",
+AUTHOR = "Moore, S.W.",
+YEAR = "1995"}

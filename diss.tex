@@ -1,0 +1,188 @@
+% The master copy of this demo dissertation is held on my filespace
+% on the cl file serve (/homes/mr/teaching/demodissert/)
+
+% Last updated by MR on 2 August 2001
+
+\documentclass[12pt,twoside,notitlepage]{report}
+
+\usepackage{a4}
+\usepackage{verbatim}
+
+\input{epsf}                            % to allow postscript inclusions
+% On thor and CUS read top of file:
+%     /opt/TeX/lib/texmf/tex/dvips/epsf.sty
+% On CL machines read:
+%     /usr/lib/tex/macros/dvips/epsf.tex
+
+
+
+\raggedbottom                           % try to avoid widows and orphans
+\sloppy
+\clubpenalty1000%
+\widowpenalty1000%
+
+\addtolength{\oddsidemargin}{6mm}       % adjust margins
+\addtolength{\evensidemargin}{-8mm}
+
+\renewcommand{\baselinestretch}{1.1}    % adjust line spacing to make
+                                        % more readable
+
+\begin{document}
+
+\bibliographystyle{plain}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Title
+
+
+\pagestyle{empty}
+
+\hfill{\LARGE \bf Tamas Sztanka-Toth}
+
+\vspace*{60mm}
+\begin{center}
+\Huge
+{\bf Cached Bug Prediction for Python repositories on GitHub} \\
+\vspace*{5mm}
+Computer Science Tripos - Part II \\
+\vspace*{5mm}
+Homerton College \\
+\vspace*{5mm}
+\today  % today's date
+\end{center}
+
+\cleardoublepage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Proforma, table of contents and list of figures
+
+\setcounter{page}{1}
+\pagenumbering{roman}
+\pagestyle{plain}
+
+\chapter*{Proforma}
+
+{\large
+\begin{tabular}{ll}
+Name:               & \bf Tamas Sztanka-Toth                       \\
+College:            & \bf Homerton College                     \\
+Project Title:      & \bf Cached Bug Prediction for Python repositories on GitHub \\
+Examination:        & \bf Computer Science Tripos - Part II, July 2016        \\
+Word Count:         & \bf X\footnotemark[1]				 \\
+Project Originator: & X                   \\
+Supervisor:         & Advait Sarkar                    \\ 
+\end{tabular}
+}
+\footnotetext[1]{This word count was computed
+by {\tt detex diss.tex | tr -cd '0-9A-Za-z $\tt\backslash$n' | wc -w}
+}
+\stepcounter{footnote}
+
+
+\section*{Original Aims of the Project}
+Original aims of the project work were\cite{Git} \cite{SZZ}\cite{KimZim}\cite{KimZim}
+\cite{FixCache}
+
+\section*{Work Completed}
+
+\section*{Special Difficulties}
+ 
+\newpage
+\section*{Declaration}
+
+I, Tamas Sztanka-Toth of Homerton College, being a candidate for Part II of the Computer
+Science Tripos, hereby declare
+that this dissertation and the work described in it are my own work,
+unaided except as may be specified below, and that the dissertation
+does not contain material that has already been used to any substantial
+extent for a comparable purpose.
+
+\bigskip
+\leftline{Signed }
+
+\medskip
+\leftline{Date }
+
+\cleardoublepage
+
+\tableofcontents
+
+\listoffigures
+
+\newpage
+\section*{Acknowledgements}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% now for the chapters
+
+\cleardoublepage        % just to make sure before the page numbering
+                        % is changed
+
+\setcounter{page}{1}
+\pagenumbering{arabic}
+\pagestyle{headings}
+
+\chapter{Introduction}
+\section{Motivation}
+Why do I want to do this project?
+\section{Aims of the project}
+Summarizing this chapter, with stating what are the aims of the project.
+\cleardoublepage
+\chapter{Preparation}
+\section{How does FixCache approaches bug-prediction}
+Overview of the FixCache algorithm, in accordance with the original 2007 paper.
+\subsection{Overview of FixCache algorithm}
+\subsection{Variables}
+\subsection{Hits vs. Misses}
+\section{Using Git for FixCache}
+\subsection{Introducing Git}
+\subsection{Git workflow and branching}
+\subsection{Repository backtracking with Git}
+\section{Software engineering tools}
+\subsection{Using Python}
+\subsection{GitPython: the Python Git package}
+
+\cleardoublepage
+\chapter{Implementation}
+\section{Design overview}
+\subsection{Parsing module}
+\subsection{File-management module}
+\subsection{The repository module}
+\subsection{Evaluation and Output}
+\section{Core algorithm implementation}
+\subsection{Identifying fixing commits}
+\subsection{Commits which introduced a bug}
+\subsection{The Repository class}
+\subsection{Implementation difficulties}
+\section{Bottleneck}
+\subsection{What caused the initial enormous running time?}
+\subsection{Speedup}
+
+\chapter{Evaluation}
+\section{Testing}
+\section{Evaluation over hit-rate}
+\subsection{The best cache-ratio}
+\subsection{Optimal pre-fetch size variables}
+\subsection{Differences between versions}
+\section{Statistical analysis: how good is FixCache?}
+\subsection{Algorithm performance over time} predictability of correctness. Differences in performances when changing the algorithm's parameters. 
+
+\cleardoublepage
+\chapter{Conclusion}
+
+\cleardoublepage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% the bibliography
+
+\addcontentsline{toc}{chapter}{Bibliography}
+\bibliography{refs}
+\cleardoublepage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% the appendices
+\appendix
+
+\end{document}
