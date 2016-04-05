@@ -1,17 +1,22 @@
 \documentclass[12pt,twoside,notitlepage]{report}
-
+\newcommand{\fxch}{FixCache }
 \usepackage{a4}
 \usepackage{verbatim}
 \title{Dissertation notes}
+\author{Tamas Sztanka-Toth \\ ts579@cam.ac.uk}
 \begin{document}
+\bibliographystyle{unsrt}
 \maketitle{}
 \setcounter{page}{1}
 \pagenumbering{arabic}
 \pagestyle{plain}
-\section*{Overview of FixCache algorithm}
-FixCache is a bug-prediction algorithm implemented in 2007 by researchers at MIT. The original algorithm was implemented with the help of Subversion and CVS, whereas my implementation is for Git. These Source Code Management systems differ in lot of aspects, the key difference between Git and the others, is that Git is distributed. This means that we do not need a remote server access every time we want to commit a new change, we simply commit them locally, and later we can push those commits to a remote location. This feature speeds up programming, but also it introduces new problems to tackle when one implements FixCache. 
+\section*{Overview of \fxch algorithm}
+\subsection*{Basic idea and how the algorithm works}
+\fxch is a bug-prediction algorithm implemented in 2007 by researchers at MIT\cite{FixCache}. The original algorithm was implemented for Subversion and CVS, whereas my implementation is for Git. These Source Code Management systems differ in lot of aspects, the key difference between Git and the others, is that Git is distributed, that is it does not require a central 'parent' or 'master' repository. This means that we do not need a remote server access every time we want to commit a new change, we simply commit them locally, and later we can push those commits to a remote location. This feature speeds up programming, but also it introduces new problems to tackle when one is mining repositories\cite{Git}.
 
-The algorithm itself is called FixCache as it uses a notion of a cache, which stores a subset of files in a repository. Following this logic, the algorithm defines a notion of locality: spacial, temporal, new-entity and changed-entity. The algorithm works as follows:
+The algorithm itself is called \fxch as it uses a notion of a cache, which stores a subset of files in a repository. Following this logic, the algorithm defines a notion of locality: spacial, temporal, new-entity and changed-entity. We use these localities to put files into the cache, to increase its accuracy. As the number of files in the cache (the cache-size) is fixed, we need to take out files from the cache if the cache is polluted. There exist different cache replacement policies (examples here), in the implementation itself I used the \textit{Last-recently-used} cache replacement policy, as it is simple, and there is not significant difference between the different replacement policies\cite{FixCache}\cite{Bugcache}\cite{Sadowski}. 
+\subsection*{Abstract view of the algorithm}
+The algorithm works as follows:
 \begin{enumerate}
 	\item Preload the cache with initial items (new-entity locality).
 	\item For each commit C in the repository, starting from the first commit:
@@ -23,11 +28,12 @@ The algorithm itself is called FixCache as it uses a notion of a cache, which st
 	\item We remove those files from the cache, which were deleted at C (clean-up).
 \end{enumerate}
 So far, files were only added to the cache. Since the cache size is fixed throughout one run, behind the scenes, the cache implementation handles file removal. It will remove as many files as necessary (using the Least-Recently-Used replace policy) to keep the cache size bounded (by a fix value).
-
+\subsection*{Variables}
 \section*{Git}
 \subsection*{Overview}
 Git is a modern code version-control system which uses distributed revision-control. The main difference with other version-control systems, say Subversion is, that Git is fully distributed. That is, a developer can make some changes on their own machine, and without accessing the main repository they can commit their changes to the local machine, as the local machine will have a valid Git repository. Later the developer can push changes from the local repository to the main repository. This approach makes it easier to develop software when internet connectivity is poor, but introduces other issues, such as merge-conflicts. It was developed to help the Linux kernel developers with proper version control system. Since its development in 2005, it has been widely used by open-source projects as their primary VCS. It has a simple design, it is fully distributed and supports non-linear development through branching.
 \subsection*{Git snapshots - how does the version control works}
+Git stores data differently to other major VCSs. Rather than storing for each file the list of changes, git stores the whole repository at each revision point in the history. For efficiency if a file hasn't been changed at a commit, rather then storing the file again, Git only stores a pointer to the last identical file in the previous revision. We can think of a Git repository as an ordered list of snapshots. To view differences (using the git diff command) Git looks up the differences in a repository between two snapshots. In this definition, version control is simply done by storing (committing) at various times the state of our repository, directory structure.
 \subsection*{Git File structure}
 At each revision point in git we can think of data represented by git as a small file structure. Objects in a Git snapshot can either be blobs or trees. Blobs correspond to files whereas trees correspond to directories and subdirectories under the repository. At each point in the history of the repository Git stores a commit object, which stores the meta-data about that commit, for example: the author, the time committed. Furthermore, this commit object has pointer to a tree object, which is the root directory of the repository. Further, each tree can have a pointer to many more trees or blobs. Blobs, as they correspond to file, do not have any children. Each commit has a pointer to it's parent(s), except the initial commit which doesn't have parent(s).
 \subsection*{Branches in Git}
@@ -41,13 +47,10 @@ When a merge occurs Git will create an automated merge commit, which will contai
 
 As each commit can be a parent of one or more commits and similarly each commit can have zero ore commits we can treat the history of a repository as a Directed Acyclic Graph (DAG). This is a big difference between other VCS softwares as in non-distributed VCS branching is harder to achieve, and once we have it it is quite hard to backtrack which branches were used by which user and when[need better explanation+reference here]. The DAG representation comes handy when analysing different user activities, but it introduces several new problems, because when we are mining a repository we might want to check each path in a repository. 
 
-It is also possible to view each branch as a linear set of commits (even when some branches were merged into this branch). Commits will appear in their order of committed time, regardless on which branch were they made. This linear representation will also contain all the merge commits, which will be the ones with at least two parents. This means, that when going through this history merged changes will be visible twice: once in their original commit (made on some branch B1) and once in the merge commit of branches B1 and B2 say.
+It is also possible to view each branch as a linear set of commits (even when some branches were merged into this branch). Commits will appear in their order of committed time, regardless on which branch were they made. This linear representation will also contain all the merge commits, which will be the ones with at least two parents. This means, that when going through this history merged changes will be visible twice: once in their original commit (made on some branch B1) and once in the merge commit of branches B1 and B2 say.	
 \subsection*{Git diff with and without the --stat flag}
-Things to write about:
-\begin{itemize}
-\item Git file structure, how does it know which file is where. Blob vs parents (different word here). 
-\item Git snapshots, and revisions, explain pointers to different file versions
-\item Complexity of using git diff with and without the stat flag
-\end{itemize}
+The command git diff outputs the difference between two snapshots (commits for instance). Without any flags/options set it will output the line-by-line difference with some metadata at the beginning for each file. If the task is only to get the basic information of how files changed it is good to use the --stat flag. With this Git will only outputs which file has had lines deleted and/or added, and how many lines this was. This second is more efficient in the background, due to how diff is implemented (reference here??).
 
+\addcontentsline{toc}{chapter}{Bibliography}
+\bibliography{refs}
 \end{document}
