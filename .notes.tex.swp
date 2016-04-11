@@ -2,6 +2,9 @@
 \newcommand{\fxch}{FixCache }
 \usepackage{a4}
 \usepackage{verbatim}
+\usepackage{amsmath}
+\usepackage[T1]{fontenc}
+
 \title{Dissertation notes}
 \author{Tamas Sztanka-Toth \\ ts579@cam.ac.uk}
 \raggedbottom                           % try to avoid widows and orphans
@@ -16,13 +19,25 @@
                                         % more readable
 
 \begin{document}
+
+\setcounter{page}{1}
+\pagenumbering{roman}
+\pagestyle{plain}
 \bibliographystyle{unsrt}
 \maketitle{}
+\tableofcontents
+\cleardoublepage        % just to make sure before the page numbering
+                        % is changed
+
 \setcounter{page}{1}
 \pagenumbering{arabic}
 \pagestyle{headings}
-\tableofcontents
 \chapter{Introduction}
+\section{Motivation}
+aaa
+\section{Aims of the project}
+\cleardoublepage
+\chapter{Preparation}
 \section{Overview of \fxch algorithm}
 \subsection{History and idea}
 \fxch is a bug-prediction algorithm implemented in 2007 by researchers at MIT\cite{FixCache}. The original algorithm was implemented for Subversion and CVS, whereas my implementation is for Git. These Source Code Management systems differ in lot of aspects, the key difference between Git and the others, is that Git is distributed, that is it does not require a central 'parent' or 'master' repository. This means that we do not need a remote server access every time we want to commit a new change, we simply commit them locally, and later we can push those commits to a remote location. This feature speeds up programming, but also it introduces new problems to tackle when one is mining repositories\cite{Git}.
@@ -79,9 +94,9 @@ At each revision we put newly encountered files into the cache. These can be fur
 To encounter a small amount of misses at the beginning, we need to pre-load the cache with some files at revision $0$. This is done by using the new-entity-locality: each file is new, so each file is considered, and we will load files with the highest LOC, according to the pre-fetch-size, discussed above.
 \subsubsection{Cleaning-up}
 At each revision we remove the deleted files from the cache, to save space for further insertions and to avoid having false data.
-\section{Git\protect\footnote{https://git-scm.com/}}
+\section{Git}
 \subsection{Overview}
-Git is a modern code version-control system which uses distributed revision-control. The main difference with other version-control systems, say Subversion is, that Git is fully distributed. That is, a developer can make some changes on their own machine, and without accessing the main repository they can commit their changes to the local machine, as the local machine will have a valid Git repository. Later the developer can push changes from the local repository to the main repository. This approach makes it easier to develop software when internet connectivity is poor, but introduces other issues, such as merge-conflicts. It was developed to help the Linux kernel developers with proper version control system. Since its development in 2005, it has been widely used by open-source projects as their primary VCS. It has a simple design, it is fully distributed and supports non-linear development through branching.
+Git\footnote{https://git-scm.com/} is a modern code version-control system which uses distributed revision-control. The main difference with other version-control systems, say Subversion is, that Git is fully distributed. That is, a developer can make some changes on their own machine, and without accessing the main repository they can commit their changes to the local machine, as the local machine will have a valid Git repository. Later the developer can push changes from the local repository to the main repository. This approach makes it easier to develop software when internet connectivity is poor, but introduces other issues, such as merge-conflicts. It was developed to help the Linux kernel developers with proper version control system. Since its development in 2005, it has been widely used by open-source projects as their primary VCS. It has a simple design, it is fully distributed and supports non-linear development through branching.
 \subsection{Git snapshots - how does the version control works}
 Git stores data differently to other major VCSs. Rather than storing for each file the list of changes, git stores the whole repository at each revision point in the history. For efficiency if a file hasn't been changed at a commit, rather then storing the file again, Git only stores a pointer to the last identical file in the previous revision. We can think of a Git repository as an ordered list of snapshots. To view differences (using the git diff command) Git looks up the differences in a repository between two snapshots. In this definition, version control is simply done by storing (committing) at various times the state of our repository, directory structure.
 \subsection{Git File structure}
@@ -100,9 +115,9 @@ As each commit can be a parent of one or more commits and similarly each commit 
 It is also possible to view each branch as a linear set of commits (even when some branches were merged into this branch). Commits will appear in their order of committed time, regardless on which branch were they made. This linear representation will also contain all the merge commits, which will be the ones with at least two parents. This means, that when going through this history merged changes will be visible twice: once in their original commit (made on some branch B1) and once in the merge commit of branches B1 and B2 say.	
 \subsection{Git diff with and without the --stat flag}
 The command git diff outputs the difference between two snapshots (commits for instance). Without any flags/options set it will output the line-by-line difference with some metadata at the beginning for each file. If the task is only to get the basic information of how files changed it is good to use the --stat flag. With this Git will only outputs which file has had lines deleted and/or added, and how many lines this was. This second is more efficient in the background, due to how diff is implemented (reference here??).
-\section{GitPython\protect\footnote{https://github.com/gitpython-developers/GitPython}}
+\section{GitPython}
 \subsection{Overview}
-GitPython is a python package developed by Sebastian Thiel\footnote{https://github.com/Byron} as a purely python high-level tool for interacting with Git repositories. By using it, one is able to do everything via Python: create new repositories, commit changes, checkout branches etc. Each Git object has its own representation in GitPython, and each object is stored in a object database to achieve lower memory overhead. In fixcache, GitPython will only be used to access for the following tasks:
+GitPython\footnote{https://github.com/gitpython-developers/GitPython} is a python package developed by Sebastian Thiel\footnote{https://github.com/Byron} as a purely python high-level tool for interacting with Git repositories. By using it, one is able to do everything via Python: create new repositories, commit changes, checkout branches etc. Each Git object has its own representation in GitPython, and each object is stored in a object database to achieve lower memory overhead. In fixcache, GitPython will only be used to access for the following tasks:
 \begin{itemize}
 \item Getting the list of commits (for the \texttt{master} branch) in chronological order
 \item To determine differences in files between two commits
@@ -118,22 +133,128 @@ usage will be much higher than the one of the \texttt{GitDB}"}. Since we \fxch b
 \chapter{Implementation}
 \section{Design overview}
 
-The algorithm is implemented in Python using its 2.7.6 release. The implementation has several modules which handle different parts of the algorithm. The two biggest modules are the \texttt{repository} and the \texttt{filemanagement}. The prior is a high level view of the files used by a repository, it essentially stores meta-data about them, and also serves them for \texttt{repository}. The latter has several classes subclassing the \texttt{RepositoryMixin} class. These are high level classes, all of them use GitPython's \texttt{git.Repo} class for communication with Git repositories. All of them implement a \texttt{run\_fixcache()} method, which will run the fixcache for the given subclass of \texttt{RepositoryMixin} with the parameters set at the time of calling the method. 
+The algorithm is implemented in Python using its 2.7.6 release. The implementation has several modules which handle different parts of the algorithm. The three biggest modules are: \texttt{filemanagement}, \texttt{cache} and \texttt{filemanagement}. 
+
+The first implements a layer for representing files, file-sets and distances between files. All these data structures are used by the \texttt{cache} and \texttt{repository} modules. 
+
+The second only contains the \texttt{Cache} class which represents our cache when running \fxch in our \texttt{repository} module. Instances of this class will store how good the algorithm is, that is they will keep track of number of hits and number of misses. Also they will handle file additions, and removals when the cache is filled.
+
+The last one has several classes subclassing the \texttt{RepositoryMixin} class. These are high level classes, all of them use GitPython's \texttt{git.Repo} class for communication with Git repositories. All of them implement a \texttt{run\_fixcache()} method, which will run the fixcache for the given subclass of \texttt{RepositoryMixin} with the parameters set at the time of calling the method. 
+
+Apart from these three modules, there exists two smaller ones: \texttt{parsing} (implementing all kinds of parsing methods used by the above three core modules) and \texttt{helper\_functions}.
+\section{Back-end modules}
 \subsection{Parsing module}
 This module is responsible for three key things: identifying which lines were deleted in the previous commit (the \texttt{get\_deleted\_lines\_from\_diff} method), identifying which lines in a file are "important" (the \texttt{important\_line} method) and finally for identifying and flagging commit messages as "bug-fixing commits" (the \texttt{is\_fix\_commit} method).
+\subsubsection*{The \texttt{important\_line} mehtod}
+The SZZ\cite{SZZ} algorithm for identifying which lines have introduced a bug will flag lines without looking more closely what is the content of each line. This was the major criticism of the algorithm itself, proposed by Kim and their colleagues\cite{KimZim}. They proposed several improvements, out of which this method is responsible for checking if a line is blank/empty or if it is a comment line. All such lines are ignored by the algorithm, as it is assumed they did not contribute to the fault introduced. It simply parses each line, and checks whether it is 	 or if it starts with \texttt{\#} (the comment symbol in python). Multi-line comments are ignored, as python uses the same syntax for them and for mutli-line strings.
 \subsubsection*{The \texttt{get\_deleted\_lines\_from\_diff} mehtod}
-The SZZ\cite{SZZ} algorithm for identifying which lines have introduced a bug will flag lines without looking more closely what is the content of each line. This was the major criticism of the algorithm itself, proposed by Kim and their colleagues\cite{KimZim}. They proposed several improvements, out of which this method is responsible for checking if a line is blank/empty or if it is a comment line. All such lines are ignored by the algorithm, as it is assumed they did not contribute to the fault introduced.
+An essential part of the \fxch algorithm is identifying which lines were removed between two revisions. This information is later used when identifying the so-called "bug-introducing" commits.
+
+This method will accept the diff message (produced by the \texttt{git diff} command) for each file, and will return a list of line numbers which were deleted between the two diff-ed revisions. It is a pretty straightforward parsing, as the output of \texttt{git diff} is well-formatted and fairly easy to understand.
+\subsubsection*{The \texttt{is\_fix\_commit} method}
+For each commit looked at, we need to decide whether it is a fixing-commit or if it is a normal (non-fixing) commit. To identify these commits, we need to parse the commit message itself. If the commit message is accepted by any of the following regular expressions (following \cite{Sadowski}), we flag it as a bug-fixing commit. Regular expressions to look for (presented as Python code) when parsing each commit message:
+\begin{itemize}
+\item \texttt{r'defect(s)?'}
+\item \texttt{r'patch(ing|es|ed)?'}
+\item \texttt{r'bug(s|fix(es)?)?'}
+\item \texttt{r'(re)?fix(es|ed|ing|age\textbackslash s?up(s)?)?'}
+\item \texttt{r'debug(ged)?'}
+\item \texttt{r'\textbackslash\#\textbackslash d+'}
+\item \texttt{r'back\textbackslash s?out'}
+\item \texttt{r'revert(ing|ed)?'}
+\end{itemize}
 \subsection{File-management module}
-\subsection{The repository module}
-\subsection{Evaluation and Output}
+When running \fxch we need to somehow keep track of the files we looked at so far, and how many faults and/or changes they had, and what is their LOC. We need to do so, as the cache replacement policies later use this data to decide which file will be removed from the cache, when the cache is full and new files arrive.
+
+Another important problem is to handle the distance between files at each revision. That is, a good implementation would be able to tell for any two files $f_1$ and $f_2$ that what is their co-occurrence (which is reversely proportional to their distance) at any commit $n$.
+
+Both of these problems are handled by the \texttt{filemanagement} module which servers as a back-end for any file-related operation that \fxch use. It has four major classes: \texttt{File, FileSet, Distance} and \texttt{DistanceSet}.
+
+All of these classes implement a \texttt{reset} method, which is called each time we are re-running \fxch with different variables. For all implementations it basically sets each internal class variable to their initial value. This is done, so that we do not need to create a new objects for each and every running of \fxch, so we will create only one object per each file hence we will save space.
+\subsubsection*{The \texttt{File} class}
+Each file found in our Git repository used by \fxch is represented by a \texttt{filemanagement.File} object. In the implementation we can treat the path for each file as a unique identifier. This means, that when a file is renamed, the implementation treats that as two separate actions: file $f_1$ with path $path_1$ was deleted, and then file $f_2$ with path $path_2$ was added, where $path_1 \neq path_2$. All these file paths are relative to the parent directory of the repository itself, rather than absolute paths. This class has three basic functions:
+\begin{itemize}
+\item \texttt{changed(self, commit)}: Called when a file has been changed, at a commit $c$ (where $c$ is an integer, representing the order of a commit, rather than its sha1 hash).
+\item \texttt{fault(self, commit)}: Similar to \texttt{change}, but called when a file has a fault fixed, that is at any bug-fixing commit. It needs to be called together with \texttt{change}.
+\item \texttt{reset(self, line)}: Resets a \texttt{File} object.
+\end{itemize}
+\subsubsection*{The \texttt{FileSet} class}
+We can think of this class as a memory-stored database, which stores \texttt{File} objects. We can query a \texttt{FileSet} object (via the path of a file) and it will return the object corresponding for the file with that path. The method \texttt{FileSet.get\_or\_create\_file} (which accepts a path, and several other variables as input) will do exactly this: it looks at the internal \texttt{FileSet.files} dictionary, and if the path we are looking for is present, it will return the value for that path. Otherwise, it will create a new file with that path, and return the newly created file.
+
+The function which is actually used by the \texttt{repository} module is the \texttt{FileSet.get\_and\_update\_multiple} method. This, rather than accepting a single path to a file, accepts the output of the \texttt{git diff --stat} command, which for example looks like this:
+\begin{verbatim}
+setup.py | 11 ++++++++++-
+ 1 file changed, 10 insertions(+), 1 deletion(-)
+\end{verbatim}
+Luckily we do not need to parse this, as GitPython already has a parser, which will parse it and create a nested Python dictionary. For the output above, this dictionary will look like this:
+\begin{verbatim}
+{u'setup.py': {'deletions': 1, 'lines': 11, 'insertions': 10}}
+\end{verbatim}
+Each changed file's path will be a key in this dictionary, and the corresponding value will be an another dictionary with three keys: \texttt{deletions, lines, insertions}. 
+
+Our function will use this parsed \texttt{diff} data to keep track of number of lines in each file (as $linechange = insertions - deletions$), when the files were added, when the files were changed (if they already existed in our \texttt{FileSet} instance, and when they are deleted. We assume that each file is deleted when their LOC (lines-of-code) becomes zero.
+
+After updating the data for each file and creating new files, it will return a list of tuples, where the second value of a tuple will be the actual \texttt{File} instance, and the first value will be either \texttt{'changed'} or \texttt{'deleted'} or \texttt{'created'} dependant on what happened to that file between the \texttt{diff}-ed commits we are viewing.
+\subsubsection*{The \texttt{Distance} class}
+In order to implement the temporal-locality used by \fxch we need to know the co-occurrence of any two files at any commit. To do that, for each two files committed together a \texttt{Distance} instance will be created. This instance will have a list of commit numbers representing the commits when the two files were changed together. That is, for each two files in a commit, we either update the corresponding \texttt{Distance} object, or we create a new one if it has not yet existed.
+\subsubsection*{The \texttt{DistanceSet} class}
+The previously described \texttt{Distance} class is not directly used by our \texttt{repository} module. It merely serves as a back-end representation used by a \texttt{DistanceSet} object, which will interact with the \texttt{repository} module. This class stores a dictionary for \texttt{Distance} object: we generate a key for each pair of files, and as a value for that key we store their \texttt{Distance} instance. 
+\paragraph{Key generation} The key generation is fairly simple: we look at which file's path is 'smaller' (that is would come earlier in an English dictionary) and append this path to the 'bigger' path. That is:
+\begin{gather*} 
+	\forall f_1, f_2\ files \\
+	key(f_1, f_2) = \begin{cases}
+						f_1.path+f_2.path &if\ f_1.path > f_2.path\\
+						f_2.path+f_1.path &if\ f_1.path < f_2.path\\
+						error &otherwise: two\ paths\ equal, f_1 == f_2
+					\end{cases}
+\end{gather*}
+\paragraph{Important functions}
+\begin{itemize}
+\item \texttt{get\_occurrence(self, file1, file2, commit=None)}
+
+Accepts two files and a commit (the commit's integer representation, a counter) as an input, and outputs their co-occurrence (a non negative integer) before, and including the commit. If the \texttt{commit} argument is none, it simply outputs the current, known co-occurrence of the two files. For the \texttt{Distance} object for the two input files, it looks at the commit list, and counts the commits which are smaller (happened earlier) or equal to the input commit.
+\item \texttt{add\_occurrence(self, file1, file2, commit)}
+
+For two files, add the commit number (again, an integer) to the \texttt{Distance} object of the two files.
+\item \texttt{get\_closest\_files(self, file\_, number, commit=None)}
+
+For a single file \texttt{file\_}, look at all \texttt{Distance} objects in which \texttt{file\_} is present. For these objects, calculate the co-occurrence, and return the top \texttt{number} of files.
+\item \texttt{remove\_files(self, files)}
+
+Removes all the \texttt{Distance} instances which contain any of the input \texttt{files}. That is: go through each file in the input \texttt{files} list, and delete all \texttt{Distance} objects which have this file.
+\end{itemize}
+\subsection{Cache implementation}
+\fxch uses the notion of a file cache, which has some limited number of files in it. We can think of it as a bucket, where we can put some files in, and when the bucked is filled, it will automatically take care of cleaning up some other files in order to make space for new arrivals. The \texttt{Cache} class is responsible for keeping track of files which are in the cache, counting hits, counting misses and removing files (according to or LRU policy).	
+\paragraph{Core methods}
+\begin{itemize}
+\item \texttt{\_remove\_multiple(self, number=1)} 
+
+Remove \texttt{number} number of files from the cache, according to the LRU cache-replacement policy.
+
+\item \texttt{add\_multiple(self, files)}
+
+Add multiple files into the cache. If there is not enough space,  the above mentioned method will be called in order to make space for the arriving files. If we want to put in too many files (ie the cache size is smaller than the number of arrivals) we pre-process the arriving files by selecting the most recently used, to obey LRU.
+
+Similarly there exists methods for adding and removing a single file from the cache: \texttt{\_remove(self)} and \texttt{add(self, file\_)}. 
+
+Only addition methods are called explicitly by the \texttt{repository} module, all the removing methods are only called implicitly when calling additions.
+
+\end{itemize}
 \section{Core algorithm implementation}
 \subsection{Identifying fixing commits: the SZZ algorithm}
+The SZZ algorithm was introduced by J. \'Sliverski, T. Zimmermann and A. Zeller \cite{SZZ}. This algorithm tries to identify which commit introduced a bug in a file, when viewing the file at a fixing-commit. The algorithm roughly works the following way:
+\begin{enumerate}
+\item At a fixing commit, identify which lines were deleted at this between this commit and it's parent commit. We assume that all of these lines were deleted as a result of the bug-fixing procedure, so that they contributed to the bug itself.
+\item Once we know the lines, we need to check where were these lines introduced. We take all these commits, and say that these are the bug-introducing commits for a given bug-fix. In Git, getting which lines were introduced by which commit is quite straightforward using the \texttt{git blame} command.
+\item Do 1-2. for each bug-fixing commit.
+\end{enumerate}
 \subsection{Commits which introduced a bug}
 \subsection{The Repository class}
-\subsection{Implementation difficulties}
-\section{Bottleneck}
-\subsection{What caused the initial enormous running time?}
+\section{Implementation difficulties}
+\subsection{Using GitPython}
+\subsection{Bottleneck}
 \subsection{Speedup}
+\section{Evaluation and Output}
 \addcontentsline{toc}{chapter}{Bibliography}
 \bibliography{refs}
 \end{document}
