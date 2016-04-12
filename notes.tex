@@ -3,7 +3,10 @@
 \usepackage{a4}
 \usepackage{verbatim}
 \usepackage{amsmath}
+\usepackage{color}
 \usepackage[T1]{fontenc}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{listings}
 
 \title{Dissertation notes}
 \author{Tamas Sztanka-Toth \\ ts579@cam.ac.uk}
@@ -19,7 +22,7 @@
                                         % more readable
 
 \begin{document}
-
+\lstset{language=Python, tabsize=4, backgroundcolor=\color{White}, keywordstyle=\color{blue}, numbers=left}
 \setcounter{page}{1}
 \pagenumbering{roman}
 \pagestyle{plain}
@@ -71,7 +74,7 @@ We only look-up the cache at so-called bug-fixing commits. To flag a commit as a
 At each bug-fixing commit, for each file involved in that commit, we make a lookup in the cache. If a file is already in the cache, we note a hit. Otherwise we score a hit. Then we define hit-rate, as mentioned before, as the ratio of hits over all lookups. Since at each commit we either increase the hit-count or miss-count (or both), the hit-rate itself is a cummulative indicator of how good our algorithm is. 
 
 At each commit, the cache contains both fault and non-faulty files. What is really important in \fxch, isthat only truly faulty files score hits, so there is a relation between the hit-rate and True-positives (files that are faulty and are in the cache) in the cache itself, that is there is a relation between hit-rate and the number of identified faulty files. Some might argue that this evaluation strategy is poor, as it is not known what is the window of our prediction, that is how early/late will the files in the cache contain bugs. There exists other, more sophisticated evaluations, by other authors such as \cite{Sadowski} and \cite{Bugcache}.
-\subsection{Cache-localities and variables}
+\subsection{Cache-localities and variables}\label{variables}
 As mentioned before there are four different localities when talking about \fxch: temporal, spatial, changed-entity and new-entity. 
 \subsubsection{Temporal-locality}
 As with physical caches, temporal-locality in \fxch is used following the idea that files which were used (had a fault) will be used (will have a fault) in the near future. At each bug-fixing commit, we load all the files involved in the cache, regardless of whether we recorded a hit, or miss for them.
@@ -101,7 +104,7 @@ Git\footnote{https://git-scm.com/} is a modern code version-control system which
 Git stores data differently to other major VCSs. Rather than storing for each file the list of changes, git stores the whole repository at each revision point in the history. For efficiency if a file hasn't been changed at a commit, rather then storing the file again, Git only stores a pointer to the last identical file in the previous revision. We can think of a Git repository as an ordered list of snapshots. To view differences (using the git diff command) Git looks up the differences in a repository between two snapshots. In this definition, version control is simply done by storing (committing) at various times the state of our repository, directory structure.
 \subsection{Git File structure}
 At each revision point in git we can think of data represented by git as a small file structure. Objects in a Git snapshot can either be blobs or trees. Blobs correspond to files whereas trees correspond to directories and subdirectories under the repository. At each point in the history of the repository Git stores a commit object, which stores the meta-data about that commit, for example: the author, the time committed. Furthermore, this commit object has pointer to a tree object, which is the root directory of the repository. Further, each tree can have a pointer to many more trees or blobs. Blobs, as they correspond to file, do not have any children. Each commit has a pointer to it's parent(s), except the initial commit which doesn't have parent(s).
-\subsection{Branches in Git}
+\subsection{Branches in Git}\label{gitbranches}
 Branches are an important feature of Git. They allow a non-linear development in a decentralised manner, meaning that developments can make their own changes locally, and later join/merge these changes together. As each commit is simply an object with some meta-data, which stores a pointer to a snapshot, a branch is simply a pointer to one of these commits. The branch named "master" is the default branch (although this can be changed), after initialising a repository you are given a "master" branch which will store a pointer to the latest commit made. When you create a branch, what really happens is that Git creates a new pointer to the commit you are viewing at that moment. Git knows which branch you are on at any time by storing a special pointer called "HEAD" which is a pointer to the branch object you are viewing. It is possible to diverge two branches, that is starting from a commit C, make some changes on branch B1, and later switch to branch B2 and make some changes again on top of C. This was the first commits after C on B1 and on B2 will have the same parent, C, and they will be diverged. Following this logic, you can also merge two branches, that is for example include the changes (that is the set of commits) made on branch B1 to the changes made on B2. If B1 and B2 are on the same linear path, we can simply fast forward, that is point the pointer of B1 to the same place when B2 is pointing. Otherwise, we need a real merge, which can be tricky to do automatically. There are two cases here:
 \begin{enumerate}
 \item There are no merge conflicts. This means that there is no single file which were changed/overwritten on both branches. In this case Git will handle merging automatically through a so-called "recursive-merging" algorithm.
@@ -112,7 +115,7 @@ When a merge occurs Git will create an automated merge commit, which will contai
 
 As each commit can be a parent of one or more commits and similarly each commit can have zero ore commits we can treat the history of a repository as a Directed Acyclic Graph (DAG). This is a big difference between other VCS softwares as in non-distributed VCS branching is harder to achieve, and once we have it it is quite hard to backtrack which branches were used by which user and when[need better explanation+reference here]. The DAG representation comes handy when analysing different user activities, but it introduces several new problems, because when we are mining a repository we might want to check each path in a repository. 
 
-It is also possible to view each branch as a linear set of commits (even when some branches were merged into this branch). Commits will appear in their order of committed time, regardless on which branch were they made. This linear representation will also contain all the merge commits, which will be the ones with at least two parents. This means, that when going through this history merged changes will be visible twice: once in their original commit (made on some branch B1) and once in the merge commit of branches B1 and B2 say.	
+It is also possible to view each branch as a linear set of commits (even when some branches were merged into this branch). Commits will appear in their order of committed time, regardless on which branch were they made. This linear representation will also contain all the merge commits, which will be the ones with at least two parents. This means, that when going through this history merged changes will be visible twice: once in their original commit (made on some branch B1) and once in the merge commit of branches B1 and B2 say.
 \subsection{Git diff with and without the --stat flag}
 The command git diff outputs the difference between two snapshots (commits for instance). Without any flags/options set it will output the line-by-line difference with some metadata at the beginning for each file. If the task is only to get the basic information of how files changed it is good to use the --stat flag. With this Git will only outputs which file has had lines deleted and/or added, and how many lines this was. This second is more efficient in the background, due to how diff is implemented (reference here??).
 \section{GitPython}
@@ -238,8 +241,8 @@ Add multiple files into the cache. If there is not enough space,  the above ment
 Similarly there exists methods for adding and removing a single file from the cache: \texttt{\_remove(self)} and \texttt{add(self, file\_)}. 
 
 Only addition methods are called explicitly by the \texttt{repository} module, all the removing methods are only called implicitly when calling additions.
-
 \end{itemize}
+Internally, files are stored in Python's \texttt{set()} object, which does not allow duplicates, but it does not have by default a limit. To actually have a limit in our cache implementation, all addition methods first look up how many files are currently in the cache, and subtract that value from the cache size to get how big is the currently available space. Removing files works accordingly to this: if we need more space, we remove as many files as necessary to get it.
 \section{Core algorithm implementation}
 \subsection{Identifying fixing commits: the SZZ algorithm}
 The SZZ algorithm was introduced by J. \'Sliverski, T. Zimmermann and A. Zeller \cite{SZZ}. This algorithm tries to identify which commit introduced a bug in a file, when viewing the file at a fixing-commit. The algorithm roughly works the following way:
@@ -255,19 +258,80 @@ The SZZ algorithm in this implementation is implemented inside the \texttt{repos
 \item \texttt{\_get\_diff\_deleted\_lines(self, commit1, commit2)}
 
 Returns the deleted line-numbers (per file) between any two commits. Used to get the deleted lines between a commit and it's parent.
-\clearpage
 \item \texttt{\_get\_line\_introducing\_commits(self, line\_list, file\_path, commit)}
 
 Once we have the line numbers which were deleted between two commits (commit and it's parent) we can for each file get the list of bug-introducing commits. This method uses the \texttt{git blame} (which, in GitPython outputs a nested list, where the first value of a list is a commit object, and the second value is a list of lines last changed - introduced - by that commit), and produces a list of bug-introducing commits.
 \end{itemize}
 \subsubsection*{Commits which introduced a bug}
-We only need to call the SZZ algorithm for bug-fixing commits. To do this, we first need to identify bug-introducing changes. We do this following a different approach than was used in the original SZZ algorithm, as explained earlier, in the section \ref{parsing}.
-\subsection{The Repository class}
+We only need to call the SZZ algorithm for bug-fixing commits. To do this, we first need to identify bug-introducing changes. We do this following a different approach that was used in the original SZZ algorithm, as explained earlier in the section \ref{parsing}.
+\subsection{The \texttt{Repository} class}
+This class is the central element of the \fxch implementation. It is connecting all modules together, and uses them to run and analyse the algorithm for different repositories. The \texttt{Repository} class is inside the \texttt{repository} module, which has two more classes, used only for evaluation purposes. 
+\paragraph{Cache size initialisation} Upon initialisation we need to set the variables used by our algorithm. First of all, we need to set the \texttt{cache\_ratio} which will be a real number between 0.0 and 1.0. From the \texttt{cache\_ratio} we calculate \texttt{cache\_size} (which will be the exact number of how many files do we allow in our cache) the following way: we take the number of files in the repository at the last commit, and we multiply this number by the \texttt{cache\_ratio}. We then take the floor of this number (if the floor is zero, we add one, as the \texttt{cache\_size} cannot be zero). That is mathematically:
+\begin{align*}
+	\forall cache\_ratio \in (0.0\dots 1.0]\\
+	cr = file\_count\_at\_last\_commit*cache\_ratio\\
+	cache\_size = \begin{cases}
+						1 & if\ floor(cr) = 0\\
+						floor(cr) & otherwise
+					\end{cases}
+\end{align*}
+To calculate the variable \texttt{file\_count\_at\_last\_commit} we need to traverse the git tree at the latest revision, and count the number of 'blobs' (objects representing files) in the tree. A strong assumption is made here, namely that the repository will always increase as history moves forward. 
+
+\paragraph{Setting variables} Once we calculated and set \texttt{cache\_size} we can calculate other variables, such as \texttt{distance\_to\_fetch} (block-size) and \texttt{pre\_fetch\_size} as discussed in \ref{variables}. In the original paper all these variables are given as a percentage of \texttt{file\_count\_at\_last\_commit}, that is if \texttt{file\_count\_at\_last\_commit = 100} then if \texttt{distance\_to\_fetch = 5\%} means that we will fetch 5 files each time we use our spacial-locality.
+
+Rather than using percentages, in the \texttt{Repository} both \texttt{distance\_to\_fetch} and \texttt{pre\_fetch\_size} are rational numbers between 0.0 and 1.0. Also, they are not ratios of \texttt{file\_count\_at\_last\_commit}, but rather of \texttt{cache\_size}. That is if \texttt{file\_count\_at\_last\_commit = 100}, \texttt{cache\_ratio = 0.1} and \texttt{distance\_to\_fetch = 0.5} then we will fetch $100*0.1*0.5 = 5$ number of files.
+
+A \texttt{Repository} instance also has a \texttt{file\_set} variable set to a \texttt{filemanagement.FileSet} instance and a \texttt{file\_distances} set to a \texttt{filemanagement.DistanceSet} instance. We are using these to keep track of files and distances in our repository. Each time we call \texttt{reset()} on our \texttt{Repository} instance (that is every time we want to re-run an analysis, with different parameters) it will also call the \texttt{reset()} method of \texttt{file\_set} and \texttt{file\_distances}.
+
+\paragraph{Initialising commits} Since in Git each commit's identifier is a 40-digit long hexadecimal number generated by SHA-1, it is impossible to know just from the hash value what is the order of commits. Our \fxch is using integers as commit identifiers (the bigger the commit number, the later it happened), so a \texttt{commit\_order} dictionary is initialised (with the \texttt{Repository.\_init\_commit\_order()} method) when a \texttt{Repository} instance is created. This \texttt{commit\_order} dictionary stores the SHA-1 value for each commit as key, and store their numeric (integer) representation as value. Each time we want to access the order of any commit object, we can lookup this dictionary.
+\paragraph{Running \fxch}
+To run \fxch we need to call \texttt{run\_fixcache} on any \texttt{Repository} instance; calling this method will run \fxch with the parameters currently set to some value. The idea is, that between two runs we call the \texttt{reset} method to change the internal variables, and the expectation is that with different variables the output will also be different.
+
+Given all other modules the algorithm implementation is straightforward, a pseudo-code would look something like this:
+\begin{lstlisting}
+cache = Cache(*args, **kwargs)
+hits = 0
+misses = 0
+for commit in commit_list:
+	parents = commit.parents
+	
+	if len(parents) == 0:
+		initial_pre_load_cache(cache, commit)
+	elif len(parents) == 1:
+		if bug_fixing(commit):
+			for f in commit.files:
+				if f in cache:
+					hits = hits + 1
+				else:
+					misses = misses + 1
+					cache.add(f) # temporal-locality
+					# get bug introducing commits
+					bic = get_bic(f, commit)
+					# get the closest files to f at bci: spatial-locality
+					cache.add_multiple(get_closest_files(f, bci)
+			
+			# new-entity and changed-entity locality
+			cache.add_multiple(commit.changed_files + commit.new_files)
+	else:
+		pass
+
+bug_prone_files = cache.file_set
+\end{lstlisting}
+Cache additions are handled by our \texttt{Cache} instance, while other operations (such as functions implementing SZZ) are handled by internal functions of \texttt{Repository}. This pseudo-code is only an abstract implementation to demonstrate how could be \fxch implemented, in the real implementation these functions do not exist (or exist differently), but the functionality is the same.
+
+In the above example we have two if-statements: firstly how many parents does a commit have. If it has zero, it means that we are viewing the initial commit, so we need to pre-load the cache with some initial files (files with the biggest LOC). If it has one parent we proceed normally. If it has two or more parents it means that we have reached a merging commit, which we can disregard as the changes listed there already have been listed somewhere earlier in our commit history, as discussed in \ref{gitbranches}.
+
+The second if-statement is when we are going through all files in our commit. If the file $f$ was already present in the cache, we increase the hit-count. Otherwise, we increase the miss-count and and this file to the cache (temporal-locality). Furthermore, we identify the commits which introduced (lets say: $bci_1, bci_2 \dots bci_n$ the bug-fixed in this commit, and add the closest files to $f$ at $bci_1, bci_2 \dots bci_n$ (spatial-locality).
+
+Furthermore, for each commit we add the changed and updated files to the cache (new-entity and changed-entity locality). 
+
+All these additions are bounded by some numbers specified by the \texttt{pre\_fetch\_size} and \texttt{distance\_to\_fetch} however these are omitted from the pseudo-code.
 \section{Implementation difficulties}
 \subsection{Using GitPython}
+When using 3rd party software it is always key if the software we are using have a good or bad documentation (if it has a documentation at all). I have found that GitPython has generally good documentation, although some pieces (object reference, internal methods and variables of classes) lack proper definitions and clear type descriptions. There were times when the only way of finding out something about a certain class was to dive deep into the source-code of GitPython and try to figure out how is the certain class implementing functionalities provided by Git itself. This resulted in a slow implementation speed at the beginning of this project.
 \subsection{Bottleneck}
 \subsection{Speedup}
-\section{Evaluation and Output}
+\chapter{Evaluation}
 \addcontentsline{toc}{chapter}{Bibliography}
 \bibliography{refs}
 \end{document}
