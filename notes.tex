@@ -143,10 +143,10 @@ The last one has several classes subclassing the \texttt{RepositoryMixin} class.
 
 Apart from these three modules, there exists two smaller ones: \texttt{parsing} (implementing all kinds of parsing methods used by the above three core modules) and \texttt{helper\_functions}.
 \section{Back-end modules}
-\subsection{Parsing module}
+\subsection{Parsing module}\label{parsing}
 This module is responsible for three key things: identifying which lines were deleted in the previous commit (the \texttt{get\_deleted\_lines\_from\_diff} method), identifying which lines in a file are "important" (the \texttt{important\_line} method) and finally for identifying and flagging commit messages as "bug-fixing commits" (the \texttt{is\_fix\_commit} method).
 \subsubsection*{The \texttt{important\_line} mehtod}
-The SZZ\cite{SZZ} algorithm for identifying which lines have introduced a bug will flag lines without looking more closely what is the content of each line. This was the major criticism of the algorithm itself, proposed by Kim and their colleagues\cite{KimZim}. They proposed several improvements, out of which this method is responsible for checking if a line is blank/empty or if it is a comment line. All such lines are ignored by the algorithm, as it is assumed they did not contribute to the fault introduced. It simply parses each line, and checks whether it is empty or if it starts with \texttt{\#} (the comment symbol in python). Multi-line comments are ignored, as python uses the same syntax for them and for mutli-line strings.
+The SZZ\cite{SZZ} algorithm for identifying which lines have introduced a bug will flag lines without looking more closely what is the content of each line. This was the major criticism of the algorithm itself, proposed by Kim and their colleagues\cite{KimZim}. They proposed several improvements, out of which this method is responsible for checking if a line is blank/empty or if it is a comment line. All such lines are ignored by the algorithm, as it is assumed they did not contribute to the fault introduced. It simply parses each line, and checks whether it is or if it starts with \texttt{\#} (the comment symbol in python). Multi-line comments are ignored, as python uses the same syntax for them and for mutli-line strings.
 \subsubsection*{The \texttt{get\_deleted\_lines\_from\_diff} mehtod}
 An essential part of the \fxch algorithm is identifying which lines were removed between two revisions. This information is later used when identifying the so-called "bug-introducing" commits.
 
@@ -246,9 +246,22 @@ The SZZ algorithm was introduced by J. \'Sliverski, T. Zimmermann and A. Zeller 
 \begin{enumerate}
 \item At a fixing commit, identify which lines were deleted at this between this commit and it's parent commit. We assume that all of these lines were deleted as a result of the bug-fixing procedure, so that they contributed to the bug itself.
 \item Once we know the lines, we need to check where were these lines introduced. We take all these commits, and say that these are the bug-introducing commits for a given bug-fix. In Git, getting which lines were introduced by which commit is quite straightforward using the \texttt{git blame} command.
-\item Do 1-2. for each bug-fixing commit.
+\item Do steps 1-2. for each bug-fixing commit.
 \end{enumerate}
-\subsection{Commits which introduced a bug}
+The assumption made by SZZ, that each deleted line in fact was a 'buggy' line is a really strong one, and it leads to plenty false positive lines. There are several techniques to lower this number, which are discussed in more detail by \cite{KimZim}. Out of those, as in section \ref{parsing}, this SZZ implementation is only using the comment-line and blank-line reduction.
+
+The SZZ algorithm in this implementation is implemented inside the \texttt{repository.Repository} class, rather than a standalone module, as it is a core part of \fxch. The two functions which are implementing it are:
+\begin{itemize}
+\item \texttt{\_get\_diff\_deleted\_lines(self, commit1, commit2)}
+
+Returns the deleted line-numbers (per file) between any two commits. Used to get the deleted lines between a commit and it's parent.
+\clearpage
+\item \texttt{\_get\_line\_introducing\_commits(self, line\_list, file\_path, commit)}
+
+Once we have the line numbers which were deleted between two commits (commit and it's parent) we can for each file get the list of bug-introducing commits. This method uses the \texttt{git blame} (which, in GitPython outputs a nested list, where the first value of a list is a commit object, and the second value is a list of lines last changed - introduced - by that commit), and produces a list of bug-introducing commits.
+\end{itemize}
+\subsubsection*{Commits which introduced a bug}
+We only need to call the SZZ algorithm for bug-fixing commits. To do this, we first need to identify bug-introducing changes. We do this following a different approach than was used in the original SZZ algorithm, as explained earlier, in the section \ref{parsing}.
 \subsection{The Repository class}
 \section{Implementation difficulties}
 \subsection{Using GitPython}
