@@ -8,6 +8,9 @@
 \usepackage[dvipsnames]{xcolor}
 \usepackage{listings}
 
+\usepackage{graphicx}
+\graphicspath{ {figs/} }
+
 \title{Dissertation notes}
 \author{Tamas Sztanka-Toth \\ ts579@cam.ac.uk}
 \raggedbottom                           % try to avoid widows and orphans
@@ -32,6 +35,10 @@
 \cleardoublepage        % just to make sure before the page numbering
                         % is changed
 
+\addcontentsline{toc}{chapter}{\listfigurename}
+
+\listoffigures
+\cleardoublepage
 \setcounter{page}{1}
 \pagenumbering{arabic}
 \pagestyle{headings}
@@ -326,11 +333,51 @@ The second if-statement is when we are going through all files in our commit. If
 Furthermore, for each commit we add the changed and updated files to the cache (new-entity and changed-entity locality). 
 
 All these additions are bounded by some numbers specified by the \texttt{pre\_fetch\_size} and \texttt{distance\_to\_fetch} however these are omitted from the pseudo-code.
+\section{Versions}
+\clearpage
 \section{Implementation difficulties}
 \subsection{Using GitPython}
 When using 3rd party software it is always key if the software we are using have a good or bad documentation (if it has a documentation at all). I have found that GitPython has generally good documentation, although some pieces (object reference, internal methods and variables of classes) lack proper definitions and clear type descriptions. There were times when the only way of finding out something about a certain class was to dive deep into the source-code of GitPython and try to figure out how is the certain class implementing functionalities provided by Git itself. This resulted in a slow implementation speed at the beginning of this project.
 \subsection{Bottleneck}
-\subsection{Speedup}
+During one run of \fxch there are several times when we have to select the "top objects from a set of objects". The "top objects" might mean "files with biggest LOC" or "least recently used files" or "closest files to a file at a commit". Usually the order does not matter after selection, we do not care whether the $k$ number of files are sorted after selection, as long as all selected files are "bigger" (ie. "have greater LOC" or "were used least recently" or "are closer than") than any file which was not selected.
+\paragraph{Initial implementation}
+Initially all these selection algorithms were implemented by: first sorting the whole set of $n$ files, and then selecting the top $k$ elements. This is rather inefficient in two cases:
+\begin{enumerate}
+\item If $k << n$, then we are wasting time on an $\mathcal{O}(n\log(n)$ operation, while we could do in $\mathcal{O}(n\log(k))$ which would be more efficient.
+\item If $k >= n$, then we could just return the whole set of $n$ files, which is $\mathcal{O}(1)$ as the order after selection does not matter, thus we are wasting time again on sorting ($\mathcal{O}(n\log(n)$).
+\end{enumerate}
+\subsection{Speed-up}\label{gettopk}
+To achieve speed-up we need to implement a "select top k elements from n objects" algorithm. Using a binary-min-heap, the pseudo-code looks like this:
+\begin{lstlisting}
+get_top_elements(objects, k):
+	if len(objects) <= k:
+		return objects
+	else:
+		heap = BinaryHeap()
+		for item in objects:
+			if len(heap) < k:
+				heap.push(item)
+			elif len(heap) == k:
+				if item < heap.get_min()
+					pass
+				else:
+					heap.pop()
+					heap.push(item)
+		return heap
+\end{lstlisting}
+We need a heap to keep track of what is the minimal item in the currently selected $k$ objects. If we find anything that is bigger than the current minimum, and if there is no space in the heap (ie. $len(heap) == k$) we pop the smallest item, and insert a new one. The time complexity of insertion and pop operations for a heap of size $k$ is $\mathcal{O}(\log{k})$, and since we need to traverse all the objects, the above function has a time complexity bounded by $\mathcal{O}(n\log{k})$ as required.
+\begin{figure}[h]
+\includegraphics[width=0.5\textwidth]{figure_1.png}
+\includegraphics[width=0.5\textwidth]{figure_2.png}
+
+\caption{Speedup of boto.git and boto3.git between version\_1 and version\_5 with different cache-ratios}
+\label{fig:speedup}
+\end{figure}
+
+We can see on figure \ref{fig:speedup} how good is the speedup for two repositories: on the x-axis we have the cache ratio as a percentage, and on the we have the speedup between version\_1 and version\_5, where we define speedup the following way:
+\[speedup(version\_1,version\_5) = \frac{time\_to\_run(version_5)}{time\_to\_run(version_1)}
+\]
+That is we can see on the left hand diagram of \ref{fig:speedup} that when the cache-ratio is 0.2 version\_5 is 5.0 times faster than version\_1. The reason why speedup increases with cache-ratio is that whenever we increase the cache-ratio we also increase the cache-size. Also, the bigger the cache size, the bigger the pre-fetch-size and distance-to-fetch, so we will fetch more files, hence our "get top k elemens from n objects" algorithm explained in \ref{gettopk} will run in $\mathcal{O}(1)$ time more often, as $k$ (the number of files we are fetching) will increase with $n$ unchanged.
 \chapter{Evaluation}
 \addcontentsline{toc}{chapter}{Bibliography}
 \bibliography{refs}
