@@ -9,6 +9,9 @@
 \usepackage{listings}
 
 \usepackage{graphicx}
+\makeatletter
+\setlength{\@fptop}{0pt}
+\makeatother
 \graphicspath{ {figs/} }
 
 \title{Dissertation notes}
@@ -80,7 +83,7 @@ We only look-up the cache at so-called bug-fixing commits. To flag a commit as a
 
 At each bug-fixing commit, for each file involved in that commit, we make a lookup in the cache. If a file is already in the cache, we note a hit. Otherwise we score a hit. Then we define hit-rate, as mentioned before, as the ratio of hits over all lookups. Since at each commit we either increase the hit-count or miss-count (or both), the hit-rate itself is a cummulative indicator of how good our algorithm is. 
 
-At each commit, the cache contains both fault and non-faulty files. What is really important in \fxch, isthat only truly faulty files score hits, so there is a relation between the hit-rate and True-positives (files that are faulty and are in the cache) in the cache itself, that is there is a relation between hit-rate and the number of identified faulty files. Some might argue that this evaluation strategy is poor, as it is not known what is the window of our prediction, that is how early/late will the files in the cache contain bugs. There exists other, more sophisticated evaluations, by other authors such as \cite{Sadowski} and \cite{Bugcache}.
+At each commit, the cache contains both fault and non-faulty files. What is really important in \fxch, is that only truly faulty files score hits, so there is a relation between the hit-rate and True-positives (files that are faulty and are in the cache) in the cache itself, that is there is a relation between hit-rate and the number of identified faulty files. Some might argue that this evaluation strategy is poor, as it is not known what is the window of our prediction, that is how early/late will the files in the cache contain bugs. There exists other, more sophisticated evaluations, by other authors such as \cite{Sadowski} and \cite{Bugcache} which look at: examples here....
 \subsection{Cache-localities and variables}\label{variables}
 As mentioned before there are four different localities when talking about \fxch: temporal, spatial, changed-entity and new-entity. 
 \subsubsection{Temporal-locality}
@@ -133,7 +136,7 @@ GitPython\footnote{https://github.com/gitpython-developers/GitPython} is a pytho
 \item To determine differences in files between two commits
 \item To keep track of each files history: number of changes, faults and lines at each commit.
 \end{itemize}
-\subsection{The object database}
+\subsection{The object database}\label{dbbackend}
 Behind the scenes: gitdb\footnote{https://github.com/gitpython-developers/gitdb}
 Behind the scenes GitPython is using gitdb for accessing a git reposiotry. This is an efficient way of accessing data, as gitdb only operates on streams of data rather than the whole objects, so it actually requires small amount of memory. There are two options here, either we use the defaut \texttt{GitDB} (implemented by the gitdb package) or the \texttt{GitCmdObjectDB} which was only added to the GitPython. The first one, according to the Thiel \textit{"uses less memory when handling huge files, but will be 2 to 5 times slower when extracting large quantities
 small of objects from densely packed repositories"} while second one \textit{"uses persistent git-cat-file instances to read repository information. These operate very fast
@@ -333,8 +336,17 @@ The second if-statement is when we are going through all files in our commit. If
 Furthermore, for each commit we add the changed and updated files to the cache (new-entity and changed-entity locality). 
 
 All these additions are bounded by some numbers specified by the \texttt{pre\_fetch\_size} and \texttt{distance\_to\_fetch} however these are omitted from the pseudo-code.
-\section{Versions}
+\section{Versions and errors}
+There are several versions implemented: from version\_1 to version\_6, which differ in various aspects. Versions 1 to 4 are incorrect, these were the part of the development process, in which different bugs were discovered in different places, to list just a few:
+\begin{itemize}
+\item Negative indexing in python... Rather than throwing an error, Python allows negative indexing, which was an issue as the initial line-difference-counter was broken, and it was accessing negative line numbers in a file (which is a list of lines in Python). Everything worked, but it was functionally incorrect.
 \clearpage
+\item Broken diff-message parser. The output of a \texttt{git diff} command should be quite easy to parse, but the first implementation only looked for the first \texttt{@@} characters (which mark a meta-data line in the diff output), while several such characters might exist.
+\item Localities were broken at the beginning. Rather than getting the files with biggest LOC the algorithm was getting the ones with smallest LOC. Similarly with last-recently-used vs. least-recently-used.
+\end{itemize}
+Version 5 and 6 only differ in that they use different object-database, as explained in \ref{dbbackend}, and version 5 is slightly faster.
+
+As these versions are mostly only functionally incorrect, it still makes sense to compare them in terms of how fast they are relative to each other, as they have roughly the same number of computations. As it can be seen in the figure on page \pageref{fig:speedup} there is a massive speed-up between version\_1 and version\_5.
 \section{Implementation difficulties}
 \subsection{Using GitPython}
 When using 3rd party software it is always key if the software we are using have a good or bad documentation (if it has a documentation at all). I have found that GitPython has generally good documentation, although some pieces (object reference, internal methods and variables of classes) lack proper definitions and clear type descriptions. There were times when the only way of finding out something about a certain class was to dive deep into the source-code of GitPython and try to figure out how is the certain class implementing functionalities provided by Git itself. This resulted in a slow implementation speed at the beginning of this project.
@@ -375,10 +387,73 @@ We need a heap to keep track of what is the minimal item in the currently select
 \end{figure}
 
 We can see on figure \ref{fig:speedup} how good is the speedup for two repositories: on the x-axis we have the cache ratio as a percentage, and on the we have the speedup between version\_1 and version\_5, where we define speedup the following way:
-\[speedup(version\_1,version\_5) = \frac{time\_to\_run(version_5)}{time\_to\_run(version_1)}
+\[speedup(version\_1,version\_5) = \frac{time\_to\_run(version\_5)}{time\_to\_run(version\_1)}
 \]
 That is we can see on the left hand diagram of \ref{fig:speedup} that when the cache-ratio is 0.2 version\_5 is 5.0 times faster than version\_1. The reason why speedup increases with cache-ratio is that whenever we increase the cache-ratio we also increase the cache-size. Also, the bigger the cache size, the bigger the pre-fetch-size and distance-to-fetch, so we will fetch more files, hence our "get top k elemens from n objects" algorithm explained in \ref{gettopk} will run in $\mathcal{O}(1)$ time more often, as $k$ (the number of files we are fetching) will increase with $n$ unchanged.
 \chapter{Evaluation}
+\section{Evaluation modules}
+\subsection{Analysing \fxch}
+To analyse \fxch we need to run it several times each time with different parameters. The \texttt{analysis} module contains different functions to perform different types of analysis: out of the three key variables we fix one or two, and later we display the results found in a diagram. The different analysis types are listed below.
+\subsubsection{\texttt{analyse\_by\_cache\_ratio}} Here, at a single analysis we fix both pre-fetch-size and distance-to-fetch, and run \fxch for 100 different cache sizes, that is $cache\_size \in \{0.01, 0.02, 0.03 \dots 0.99, 1.00\}$ We run this for different pre-fetch-size and distance-to-fetch values, namely: $pre\_fetch\_size \in \{0.1, 0.15, 0.2\}$ and $distance\_to\_fetch \in \{0.1, 0.2, 0.3, 0.4, 0.5\}$ That is, a complete analysis of this type will require $100*5*3=1500$ runs of \fxch.
+\subsubsection{\texttt{analyse\_by\_fixed\_cache\_ratio}} 
+Following the previous examples, here we fix the cache-ratio, and are interested in the best possible pre-fetch-size and distance-to-fetch for a given cache-ratio. We look at different cache-ratios, to be specific: $cache\_ratio \in \{0.05, 0.1, \dots 0.5\}$. 
+\subsection{Displaying results}
+We store all the results, for each analysis in .csv files. The files are named according to the analysis made. For example, for a \texttt{analyse\_by\_cache\_ratio} analysis with pre-fetch-size = 0.1 and distance-to-fetch = 0.5 the file would be named \texttt{analyse\_by\_cache\_ratio\_progressive\_dtf\_0.5\_pfs\_0.1.csv}. Each such file has four columns, where one row corresponds to a single run of the algorithm itself: 
+\begin{itemize}
+\item repo\_dir: the directory of the repository the analysis was run on.
+\item hits: the number of hits for that analysis
+\item misses: the number of misses for that analysis
+\item cache\_size: the exact size of the cache as an integer
+\item dtf: our distance-to-fetch
+\item pfs: our pre-fetch-size
+\item ttr: the time-to-run for that single analysis.
+\end{itemize}
+Each file is under a following directory structure: \texttt{analyses\_output/<version>/<repository>/}, for example \texttt{analyses\_output/version\_5/boto/}.
+
+Once the .csv files were created, we read them and display the data using the matplotlib\footnote{http://matplotlib.org/} Python library. The \texttt{graph} module is responsible for reading, and displaying the .csv files created by the \texttt{analysis} module as .png images, created by matplotlib.
+\section{Evaluation over hit-rate}
+\subsection{Results}
+In the original paper \fxch is evaluated and analysed against the hit-rate, that is the ratio of hits over all lookups. It was found for several projects (such as Apache1.3, PostgreSQL, Mozilla and others in \cite{FixCache}) that the hit rate is between 0.65 and 0.95 for cache-rate of 0.1, pre-fetch-size of 0.1 and distance-to-fetch of 0.5.
+
+For the same variables, similar results were found: hit-rate was always between 0.6 and 0.83. Also, for repositories with higher commit number usually have a bigger hit-rate, as we can see on the diagram on page \pageref{fig:v5_repos}. At cache-size = 0.2, we get an even better result of hit-rate which will be between 0.75 and 0.9. It seems that for bigger repositories (such as boto.git) the curve is smoother than for smaller ones.
+
+What is interesting is that changing pre-fetch-size and distance-to-fetch does not change drastically our hit-rate as can be seen on the figure \ref{fig:fixed_cache} (on page \pageref{fig:fixed_cache}) and on the figure \ref{fig:plot_all} (on the page \pageref{fig:plot_all}). This result was also found by \cite{Bugcache}: they found that temporal-temporal locality have significantly bigger impact on cache performance than new-entity-locality, changed-entity-locality (pre-fetch-size) and spatial-locality (distance-to-fetch). That is, putting the most-recently faulty files to our cache has the biggest impact of how many hits do we get.
+
+In figure \ref{fig:plot_all} we plot all analyses for raspberryio.git and boto.git (so 1500 runs in total) and it is clear from the figure that the hit-rate always is always bound by a 0.1 window (that is the difference between the best hit rate and the worst hit-rate is always smaller than 0.1, for any cache-ratio). This result is even less for boto.git (which has a 10 times longer commit-history than raspberryio.git), when the window is around 0.03 hit-rate.
+
+In the figures \ref{fig:fixed_cache} we can see that for boto.git, if we fix the cache-ratio at 0.1 and at 0.2 than we will get the best results of hit rate when pre-fetch-size is low, and distance-to-fetch is either 0.3 or 0.4 or 0.5 which is similar to what has been found by the original authors in \cite{FixCache}.
+\paragraph{What do these results mean?} When comparing with the original paper, the results are similar (0.65-0.95 vs 0.6-0.83), although the top hit-rate boundary (0.95 for 0.1 cache-ratio) was not achieved, the highest was 0.83 for boto.git. Also, when making such a comparison one does need to remember that this implementation differs from the original in two key things: firstly, it was implemented for Git rather than Subversion and CSV and secondly it was run on Open-Source Python repositories rather than C/C++ or Java projects. 
+
+After comparison, we can safely state the following:
+\begin{enumerate}
+\item The results found do not differ significantly from the results found in the original paper. We also have a huge variance between the hit-rates of different repositories (0.6-0.83 vs. 0.65-0.95 in the original paper), which seems to be connected to the number of commits in a repository.
+\item This difference might be due to several things, such as: (a) Python programmers make more mistakes as the language is structured differently (loose type system: duck-typing, and possibly other differences), so in general Python repositories are more vulnerable; (b) Open-source projects are more bug-prone as they are less "looked-after" and the development process is more chaotic than in organised companies and teams. Further analysis of these differences was out of the scope for this dissertation, but it definitely would be interesting to investigate further.
+\item From this results we can see that \fxch works for Git, and also it works for Open-Source Python repositories.
+\end{enumerate}
+\subsection{Criticism}
+Authors of the original paper introducing \fxch claim that after running the algorithm, our cache will contain the files which "are more likely to have a bug in the future" than others. However, they did not specify what is "future" ie. how many commits/days/weeks ahead does \fxch predict? To know this, we have to introduce the notion of a windowed-repository to our implementation, which will be explained later, on page \pageref{windowedrep}, and we find that \fxch indeed works for the first 10-15 commits in the future, but later it's accuracy drops.
+
+Another criticism is that when we identify, say 10\% of files, we assume that all files in the repository have the same importance. This, however is not true, as generally longer files will have bigger impact and importance on our project. So we might identify 10\% of our file base, but this 10\% may account for 20\% of our code-base (ie we identify longer files). Sadowski and colleagues \cite{Bugcache} found that even if this is the case, \fxch finds the files with the highest "defect densities" (files which are more bug dense: LOC/\#bugs).
+\clearpage
+\begin{figure}[t!]
+\includegraphics[width=1.0\textwidth]{figure_3.png}
+\caption{Evaluation of \fxch according to hit-rate for different repositories}
+\label{fig:v5_repos}
+\end{figure}
+\begin{figure}[t!]
+\includegraphics[width=0.55\textwidth]{figure_5-1.png}
+\includegraphics[width=0.55\textwidth]{figure_5-1.png}
+\caption{Fixed cache-ratio analysis for boto.git}
+\label{fig:fixed_cache}
+\end{figure}
+\begin{figure}[t!]
+\includegraphics[width=1.0\textwidth]{figure_4-1.png}
+\includegraphics[width=1.0\textwidth]{figure_4-2.png}
+\caption{All cache-ratio analyses for raspberryio.git and boto.git}
+\label{fig:plot_all}
+\end{figure}
+\clearpage
+\section{Evaluating with \texttt{WindowedRepository}}\label{windowedrep}
 \addcontentsline{toc}{chapter}{Bibliography}
 \bibliography{refs}
 \end{document}
