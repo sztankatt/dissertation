@@ -1,5 +1,6 @@
 \documentclass[12pt,twoside,notitlepage]{report}
 \newcommand{\fxch}{FixCache}
+\newcommand{\etal}{\textit{et al.}}
 \usepackage{a4}
 \usepackage{verbatim}
 \usepackage{amsmath}
@@ -16,6 +17,9 @@
 \usepackage[labelfont=bf]{caption}
 \usepackage{wrapfig}
 \usepackage[rightcaption]{sidecap}
+\usepackage[parfill]{parskip}
+
+
 \makeatletter
 \setlength{\@fptop}{0pt}
 \makeatother
@@ -76,8 +80,8 @@ Homerton College \\
 \begin{tabular}{ll}
 Name:               & \bf Tamas Sztanka-Toth                       \\
 College:            & \bf Homerton College                     \\
-Project Title:      & \bf Cached Bug Prediction for Python repositories\\ 						& \bf on GitHub \\
-Examination:        & \bf Computer Science Tripos - Part II, July 2016        \\
+Project Title:      & \bf Cached Bug Prediction for Python\\ 						& \bf repositories on GitHub \\
+Examination:        & \bf Computer Science Tripos - Part II, 2016        \\
 Word Count:         & \bf X\footnotemark[1]				 \\
 Project Originator: & Advait Sarkar                \\
 Supervisor:         & Advait Sarkar                    \\ 
@@ -131,38 +135,79 @@ extent for a comparable purpose.
 \pagenumbering{arabic}
 \pagestyle{headings}
 \chapter{Introduction}
+This dissertation explores one of the bug-prediction techniques used for repositories using a Version Control System (VCS): \fxch{}\cite{FixCache}. It will first explain the idea behind this algorithm, together with necessary background knowledge in Chapter 2; then in Chapter 3, it will talk about the implementation details and difficulties; finally in Chapter 4, it will evaluate the analysis results for five different Python repositories and evaluate the results found and compare these results to the ones found by the original paper of Kim \etal{}\cite{FixCache}.
+
+This chapter will further talk about motivation behind the dissertation itself, and describe some previous work done in the field of bug-prediction and mining software repositories.
+\section{Motivation}
+Testing and debugging during creation of a new program, product or software has always been one of the most important parts of Computer Science. Companies and developer teams usually spend a lot of time and effort when finding and fixing bugs prior to releasing a stable version of a product.
+
+As  projects and repositories grow bigger and bigger every day, their complexity also rises, which further means that testing and modelling also becomes harder. As follows developers have to write more complex unit-tests and debugging tools, which will cover a wider range of use cases. The creation of these more complex tools will usually require more time, and therefore developers will spend a higher percentage of their time on writing testing tools rather than developing the product itself.
+
+However even with the most advanced testing tools and review techniques there still are bugs which are only discovered after deployment, for example when a product is used in an unexpected way. As a reason, bug-prediction techniques have gained importance. These, as opposed to the static paradigms (like unit-testing) will use some metrics or data (ex. commit-history) associated with the code-base to identify bugs. The topic of this dissertation is to explore, and analyse one such algorithm, which uses the commit-history to identify more bug-prone files.
+
+\section{Previous work}
+There are several other approaches to bug-prediction to date, which rely on different information, and they can be put into two main categories: Change-log approaches and Single-version approaches\cite{5463279}. Ultimately, all of them try to achieve the same result: to narrow down the set of files from a code-bas to files, classes, functions which are more bug-prone than the others, or are more likely to contain a bug in the future.
+
+\paragraph{Single-version}The Single-version approaches use the current state of the repository and calculate variety of metrics  to predict faulty behaviour. The most commonly used metric is the so-called Chidamber and Kremmer metrics suite\cite{295895}. The CK metrics were proposed for Object-oriented programs (OOP), and they quantify the state of a program using different data. For example, one metric is the Weighted Method Count per Class (WMC): the sum of the \textit{complexities} of the methods in that class. The definition of the per method \textit{complexity} measure is left open by Chidamber and Kremmer\cite{295895}, they only suggest it should be an additive property.
+
+There are several other OOP metrics used, which weren't suggested as a part of CK metrics. A simple example might be, the Lines Of Code per file, or method (LOC).
+
+These metrics are then used as a part of a bug-prediction or bug-identification scheme. Several such schemes were proposed, for reference and examples one should look at the listings described by D'Ambros \textit{et al.}\cite{5463279}.
+
+\paragraph{Change-log}In contrast, the Change-log approaches look at how the repositories evolved over time, and try to predict where the future defects will be. For example Hassan's algorithm calculates the complexity of each change and calculates the entropy of these changes which then is used for bug-prediction\cite{hassan}.
+
+\fxch{} is also a change-log approach to bug prediction: the algorithm looks as a history as a whole, and using how a repository evolved, it tries to identify more bug-prone entities. It was introduced by Kim \textit{et al.} in 2007\cite{FixCache}, who implemented it for both files and methods. These two approaches differ only in that the first looks at files while the second looks at methods as the basic entities the algorithm is ran on. This dissertation will only look at the first, that is the file-level implementation.
+
+Since its introduction, \fxch{} has been researched and tested heavily: Sadowski \etal{}\cite{Sadowski} analysed how the algorithm performs on the file-level, and how does the hit-rate (introduced by \cite{FixCache}) perform over time. Rahman \etal{}\cite{Bugcache} compared the algorithm to other prediction techniques, and found it to be better than a naive prediction technique, but not significantly.
+
+Previous implementations\cite{FixCache}\cite{Sadowski}, except one\cite{Bugcache} did not use Git\cite{TorvaldsGit} as their back-end VCS, but rather they used an alternative one such as Subversion (SVN) or CVS. These Version Control Systems differ in many aspects, which will be discussed more broadly in section \ref{section-Git}. Also, as these implementation were solely ran on C/C++ and Java products rather than Python, hence my motivation to implement \fxch{} and run it on public Python repositories, on GitHub.
+\section{Terminology}
+As this dissertation (as explained earlier) discusses only \fxch{} implemented for files (and not for methods), I will use the words \textit{entity} and \textit{file} interchangeably.
+
+Also, although in Git \textit{revision} and \textit{commit} do not mean the same thing, I will use these two as synonyms as well.
 \cleardoublepage
 \chapter{Preparation}
-This chapter summarizes the work done before implementation, relevant literature and concepts used by \fxch{} algorithm. It first discusses \fxch{} and it's background; then it describes Git\cite{TorvaldsGit} software management system and how can it be used to implement \fxch{}. Finally, in this chapter we will look at GitPython: a Python library used to acces Git repositories.
+This chapter summarizes the work done before implementation: it discusses relevant literature and concepts used by \fxch{}. It first discusses \fxch{} and it's background; then it describes Git\cite{TorvaldsGit} software management system and how can it be used to implement \fxch{}. Finally, in this chapter will introduce a development tool used in this dissertation: GitPython, a Python library used to acces Git repositories.
 \section{Overview of \fxch{} algorithm}
-\subsection{History}
-\fxch{} is a bug-prediction algorithm implemented in 2007 by researchers at MIT\cite{FixCache}. The original algorithm was implemented for Subversion and CVS, whereas my implementation is for Git. These Source Code Management systems differ in lot of aspects, the key difference between Git and the others, is that Git is distributed, that is it does not require a central `parent` or `master` repository. This means that we do not need a remote server access every time we want to commit a new change, we simply commit them locally, and later we can push those commits to a remote location. This feature speeds up programming, but also it introduces new problems to tackle when one is mining repositories\cite{Git}.
-
-The authors argued in the original paper that after \fxch{} is ran for a repository it will correctly identify some subset of the repositories file-base which subset is said to contain files which are "more likely to have a bug in the future". This dissertation will further explore this proposition, will discuss the best parameter for \fxch{} and in the Evaluation chapter will compare results with the original paper.
+As mentioned before, 
+\fxch{} can be implemented for method-level and for file-level bug-prediction\cite{FixCache}. The difference is what do we treat as our basic entites: files or methods. So below, in figure \ref{fixcache_figure} the objects in our parallelogram (which a pictogram for our cache) are files. This figure is a flow-chart for a part of the algorithm.
+\begin{figure}[h]
+\includegraphics[width=0.6\textwidth]{fixcache_figure.png}
+\centering
+\captionsetup{width=0.6\textwidth}
+\caption{Abstract view of how \fxch{} proceeds when a bug-introducing change is encountered.}.
+\label{fixcache_figure}
+\end{figure}
 \subsection{Abstract view of the algorithm}
 The algorithm works as follows:
 \begin{enumerate}
-	\item Preload the cache with initial items (new-entity locality).
+	\item Preload the cache with initial items.
 	\item For each commit C in the repository, starting from the first commit:
-	\item If the commit is identified as a fixing-commit:
-		
-	For each file uploaded by that commit, we check if they are in the cache. If a file is in the cache, we record a hit, else we record a miss.
-	\item For each file $F$ which were not in the cache, we go back to the commits when the bugs in those files were introduced (say revision $n$), and take some closest files to $F$, at revision $n$ (spacial locality).
-	\item We select some subset of new-files and changed-files at C, and put this subset to the cache (new-entity locality and changed-entity locality).
+	
+	\item If the commit is identified as a fixing-commit (a bug-fixing commit):
+	\begin{enumerate}
+	\item For each file uploaded by that commit, we check if they are in the cache. If a file is in the cache, we record a hit, else we record a miss.
+	\item For each file $F$ which were not in the cache, we go back to the commits when the bugs in those files were introduced (say revision $n$), and take some closest files to $F$, at revision $n$.
+	\end{enumerate}
+	\item We select some subset of new-files and changed-files at C, and put this subset into the cache.
 	\item We remove those files from the cache, which were deleted at C (clean-up).
 \end{enumerate}
 
-So far, files were only added to the cache. What happens is that the algorithm in the background takes care of cache pollution, and removes files from the cache to make space for new arrivals.
+Figure \ref{fixcache_figure} shows how the algorithm proceeds at step 3, when we identify a fixing-commit.
+
+After the algorithm has completed, the files which ended-up in the cache are said to be more bug-prone, and they are the ones which will more likely to have a bug in the future.
+
+So far, files were only added to the cache, but our cache will have a limit of the number of files it can store, this is the cache-size. To ensure that new files can be added, behind the scenes the algorithm should take care of cache pollution, and should remove files from the cache to make space for new arrivals.
 \subsubsection*{Cache-replacement policies}
-The algorithm itself is called \fxch{} as it uses a notion of a cache, which stores a subset of files in a repository. Following this logic, the algorithm defines a notion of locality: spacial, temporal, new-entity and changed-entity. We use these localities to put files into the cache, to increase its accuracy. As the number of files in the cache (the cache-size) is fixed, we need to take out files from the cache if the cache is polluted. There exist different cache replacement policies\cite{FixCache}:
+As the number of files in the cache (the cache-size) is fixed, we need to take out files from the cache if the cache is polluted. There exist different cache replacement policies\cite{FixCache}:
 \begin{itemize}
-\item \textit{Least-recently-used (LRU)}: When removing files from the cache we first remove those which were used least-recently. That is they were added/changed earlier in the commit history.
+\item \textit{Least-recently-used (LRU)}: When removing files from the cache we first remove those which were used least-recently. That is we remove the files which were added/changed earlier in our commit history.
 \item \textit{LRU weighted by number of changes (CHANGE)}: This approach will remove files which were changed the least, as the intuition is that more frequently used files are more bug-prone, so we want to keep them in the cache.
 \item \textit{LRU weighted by number of faults}: This is similar to the approach before, the only difference is that instead of removing files with least changes it removes files with least faults.
 \end{itemize}
-In the implementation itself I have used the LRU cache replacement policy, as it is simple, and there is not significant difference between the different replacement policies\cite{FixCache}\cite{Sadowski}\cite{Bugcache}.
-\subsection{Hits, misses and hit rate}
-We only look-up the cache at the so-called bug-fixing commits. To flag a commit as a bug-fixing one, we use a set of regular expressions (which are listed in more detail in section \ref{parsing}) and parse the commit message. If a message matches any of our regular expressions, it is a bug-fixing commit (following the idea used in \cite{KimZim}).
+In the implementation itself I have used the LRU cache replacement policy, as it is simple, and there was no significant difference identified between the different replacement policies by neither of the previous implementations\cite{FixCache}\cite{Sadowski}\cite{Bugcache}.
+\subsection{Hits, misses and hit-rate}
+We only look-up the cache at the so-called bug-fixing commits (commits which were identified as fixing-commits). To flag a commit as a bug-fixing one, we use a set of regular expressions (which are listed in more detail in section \ref{parsing}) and parse the commit message. If a message matches any of our regular expressions, it is a bug-fixing commit (following the idea used in \cite{KimZim}).
 Some examples of bug-fixing commit messages\footnote{All examples taken from identified commit-messages of facebook-sdk.git repository, explained later.}:
 \begin{itemize}
 \item \texttt{Simple json module import. Fixes \#106.}
@@ -172,55 +217,71 @@ Some examples of bug-fixing commit messages\footnote{All examples taken from ide
 \item \texttt{PEP8 fixes. Make sure that code is compliant with pep8 1.3.3.}
 \end{itemize}
 
-At each bug-fixing commit, for each file involved in that commit, we make a lookup in the cache. If a file is already in the cache, we note a hit. Otherwise we score a miss. Then we define hit-rate, as the ratio of hits over all lookups, that is:
+At each bug-fixing commit, for each file involved in that commit, we make a lookup in the cache. If a file is already in the cache, we note a \textbf{hit}. Otherwise we score a \textbf{miss}.
+\subsubsection*{Hit-rate}
+Once we have the number of hits and misses, we can define \textbf{hit-rate}, as the ratio of hits over all lookups, that is:
 \[
 	hitrate = \frac{\#hits}{(\#misses + \#hits)}
 \]
-Since at each commit we either increase the hit-count or miss-count (or both), the hit-rate itself is a cumulative indicator of how good our algorithm is. 
 
-At each commit, the cache contains both fault and non-faulty files. What is really important in \fxch{}, is that only truly faulty files score hits, so there is a relation between the hit-rate and True-positives (files that are faulty and are in the cache) in the cache itself, that is there is a relation between hit-rate and the number of identified faulty files. Some might argue that this evaluation strategy is poor, as it is not known what is the window of our prediction, that is how early/late will the files in the cache contain bugs. There exists other, more sophisticated evaluations, by other authors such as \cite{Sadowski} and \cite{Bugcache} which look at: examples here....
-\subsection{Cache-localities and variables}\label{variables}
-As mentioned before there are four different localities when talking about \fxch{}: temporal, spatial, changed-entity and new-entity. 
+At each commit, the cache contains both fault and non-faulty files. What is really important in \fxch{}, that only truly faulty files score hits, so there is a relation between the hit-rate and True-positive files (files that are faulty and are in the cache).
+
+Since at each commit we either increase the hit-count or miss-count (or both), the hit-rate itself is a cumulative indicator of how good our algorithm is, hence usually we are only interested in the hit-rate after the algorithm completed its run. Kim \etal{}\cite{FixCache} used this hit-rate at the end as their main evaluation metric when evaluationg \fxch{}.
+
+Some might argue that this evaluation strategy is poor, as even with high hit-rate it is not known what is the window of our prediction, that is how early/late will the files in our cache contain bugs. In Chapter 4 \fxch{} will be evaluated against the hit-rate, but also a new, more sophisticated evaluation technique will be introduced.
+\subsection{Cache-localities}
+The algorithm itself is called \fxch{} as it uses a notion of a cache, which contains a fixed subset of files of a repository. Following this logic, the algorithm defines a notion of locality: spacial, temporal, new-entity and changed-entity. We use these localities to put files into the cache, in order to increase the algorithm's accuracy.
 \subsubsection{Temporal-locality}
-As with physical caches, temporal-locality in \fxch{} is used following the idea that files which were used (had a fault) will be used (will have a fault) in the near future. At each bug-fixing commit, we load all the files involved in the cache, regardless of whether we recorded a hit, or miss for them.
+As with physical caches, temporal-locality in \fxch{} is used following the idea that an entity which had a fault recently is likely to have a fault in the near future. That is, at each bug-fixing commit, we will load all the files involved in that commit to the cache.
 \subsubsection{Spatial-locality}
-Again, the idea of spatial-locality comes from the world of physical caches: when a file is used (has a fault) it is likely that other files "near" to that file will be used (will have a fault). To define nearness, we first need to define the notion of distance for two files in \fxch{}. Distance is for any two files $f_1$ and $f_2$ at revision/commit $n$ is defined as (following \cite{FixCache}):
+Again, the idea of spatial-locality comes from the world of physical caches: when a file had a fault it is likely that other files `near' to that file will have a fault.
+
+To define `nearness', we first need to define the notion of distance for two files in \fxch{}. Distance  for any two files $f_1$ and $f_2$ at revision/commit $n$ is defined as (following Kim \etal{}\cite{FixCache}):
 \[
 	distance(f_1, f_2, n) = \frac{1}{cooccurrence(f_1, f_2, n)}
 \]
 The $coocurrence(f_1, f_2, n)$ returns an integer: how many times were the files $f_1$ and $f_2$ used (committed) together from revision $0$ to revision $n$.
 
-\textbf{Distance-to-fetch (block-size)}: this parameter (variable) is used to define how many files will be fetched when loading the closest files to a file at revision $n$.
+Note that we use this locality only when a file is missed, as with physical caches when we only load a new cache line into a cache when a cache-miss occurs. If a file (say $f_t$) is missed during a bug-fixing commit, we go back to the bug-introducing commit(s) and fetch the closest files to $f_t$ at each bug-introducing commit identified. We can identify the bug-introducing commits using the SZZ algorithm\cite{SZZ}. It is important to understand the distinction between bug-fixing commits and bug-introducing commits. The former were identified by parsing the commit message, while the latter are identified by the SZZ algorithm.
 
-This locality is used every time we have a cache-miss. If a file (say $f_t$) is missed during a bug-fixing commit, we go back to the bug-introducing commit(s) and fetch the closest files to $f_t$ at each bug-introducing commit identified. We can identify the bug-introducing commits using the SZZ algorithm\cite{SZZ}. Note that bug-fixing commits are not the same as bug-introducing commits. The former were identified by parsing the commit message, while the latter are identified by the SZZ algorithm.
 \subsubsection{Changed-entity-locality and new-entity-locality}
-At each revision we put newly encountered files into the cache. These can be further divided into two categories: new files (new-entity-locality) and files changed between the revision viewed and the previous revision (changed-entity-locality). 
+At each commit we put the encountered files into the cache. The encountered entities can be further divided into two categories: new files (new-entity-locality) and files changed between the commit and its parent commit (changed-entity-locality).
+\subsection{Variables}\label{variables}
+\subsubsection{Distance-to-fetch (block-size)}
+This parameter (variable) is used to define how many of the closest files will be loaded to the cache together with our missed file, according to the spatial-locality defined above.
 
-\textbf{Pre-fetch-size}: this variable is used for both changed-entity and new-entity locality to specify how many files should be fetched. At each revision files with higher Lines-of-code (LOC) are put in the cache first. That is if the pre-fetch-size is 5, than we will load at revision $n$ the 5 files with highest LOC.
-
+\subsubsection{Pre-fetch-size}
+This variable is used for both changed-entity and new-entity localities to specify how many files should be fetched. At each revision files with higher Lines Of Code (LOC) are put in the cache first. That is if the pre-fetch-size is 5, than we will load at commit $c_n$ the 5 new-files with highest LOC and the 5 changed-files with the highest LOC.
+\subsection{Pre- and post-processing}
 \subsubsection{Initalising the cache}
-To encounter a small amount of misses at the beginning, we need to pre-load the cache with some files at revision $0$. This is done by using the new-entity-locality: each file is new, so each file is considered, and we will load files with the highest LOC, according to the pre-fetch-size, discussed above.
+To encounter a small number of misses at the beginning, we need to pre-load the cache with some files at commit $0$. This is done by using the new-entity-locality: each file is new, so each file is considered, and we will load files with the highest LOC, according to the pre-fetch-size, discussed above.
 \subsubsection{Cleaning-up}
-At each revision we remove the deleted files from the cache, to save space for further insertions and to avoid having having non-existent files in the cache.
-\subsection{Identifying fixing commits: the SZZ algorithm}\label{szz}
+At each commit we remove the deleted files from the cache, to save space for further insertions and to avoid having having non-existent files in the cache.
+\section{Identifying fixing commits: the SZZ algorithm}\label{szz}
 The SZZ algorithm was introduced by J. \'Sliverski, T. Zimmermann and A. Zeller \cite{SZZ} to identify which commit introduced a bug in a file, when viewing the file at a bug-fixing commit. The algorithm works the following way:
 \begin{enumerate}
 \item At a fixing commit, identify which lines were deleted at this between this commit and it's parent commit. We assume that all of these lines were deleted as a result of the bug-fixing procedure, so that they contributed to the bug itself.
 \item Once we know the lines, we need to check where were these lines introduced. We take all these commits, and say that these are the bug-introducing commits for a given bug-fix. In Git, getting which lines were introduced by which commit is quite straightforward using the \texttt{git blame} command.
 \item Do steps 1-2. for each bug-fixing commit.
 \end{enumerate}
-The assumption made by SZZ, that each deleted line in fact was a 'buggy' line is a really strong one, and it leads to plenty false positive lines. There are several techniques to lower this number, which are discussed in more detail by \cite{KimZim}. Out of those, as explained later in section \ref{parsing}, this SZZ implementation is only using the comment-line and blank-line reduction.
-\section{Git}
+The assumption made by SZZ, that each deleted line in fact was a 'buggy' line is a really strong one, and it leads to plenty false positive lines. There are several techniques to lower this number, which are discussed in more detail by \cite{KimZim}. Out of those, as explained later in section \ref{parsing}, the SZZ implementation discussed in this dissertation is only using the comment-line and blank-line reduction.
+\section{Git}\label{section-Git}
 \subsection{Overview}
 \begin{figure}[ht!]
 \includegraphics[width=1.0\textwidth]{decentralised_git.png}
 \caption[Distributed revision-control with Git]{Distributed revision-control with Git. Figure taken from \cite{TorvaldsGit}.}
 \label{decentralised_git}
 \end{figure}
-Git\cite{TorvaldsGit} is a modern code version-control system which uses distributed revision-control. The main difference with other version-control systems, say Subversion is, that Git is fully distributed. That is, a developer can make some changes on their own machine, and without accessing the main repository they can commit their changes to the local machine, as the local machine will have a valid Git repository. Later the developer can push changes from the local repository to any other machine which it has access to, as seen in the figure \ref{decentralised_git}. Usually there is a dedicated `origin` computer which holds the up to date version of a repository, and with which the developers are communicating. This approach makes it easier to develop software when internet connectivity is poor (as we can still work on a project locally), but introduces other issues, such as merge-conflicts. It was developed to help the Linux kernel developers with proper version control system. Since its development in 2005, it has been widely used by open-source projects as their primary VCS, such as the Django Project\footnote{https://www.djangoproject.com/}, Ruby on Rails\footnote{http://rubyonrails.org/} or jQuery\footnote{https://jquery.com/}.
+This dissertation is using Git\cite{TorvaldsGit} as its back-end VCS when running \fxch{}. The main difference between Git and other VCSs, say Subversion is, that Git is fully distributed: each developer's machine has a valid Git repository to which the developer can commit to, without accessing any `main' repository. Later the developer can push changes from the local repository to any other machine which it has access to, as seen in the figure \ref{decentralised_git}.
+
+Despite this, usually there is a dedicated `origin' computer which holds the up to date version of a repository, and with which the developers are communicating. This approach makes it easier to develop software when internet connectivity is poor (as we can still work on a project locally), but introduces other issues, such as merge-conflicts (more on this later). 
+
+Since its development in 2005, Git has been widely adopted by variety open-source projects as their primary VCS, such as the Django Project\footnote{https://www.djangoproject.com/}, Ruby on Rails\footnote{http://rubyonrails.org/} or jQuery\footnote{https://jquery.com/}.
 \subsection{Git snapshots - how does the version control works}
 
-Git stores data differently to other major VCSs. Rather than storing for each file the list of changes, git stores the whole repository at each revision point in the history. For efficiency if a file hasn't been changed at a commit, rather then storing the file again, Git only stores a pointer to the last identical file in the previous revision as in figure \ref{snapshot_git}. We can think of a Git repository as an ordered list of snapshots. To view differences (using the \texttt{git diff} command) Git looks up the differences in a repository between two snapshots. In this definition, version control is simply done by storing (committing) at various times the state of our repository, directory structure.
+Git stores data differently to other major VCSs. Rather than storing for each file the list of changes, git stores the whole repository at each  point in the history. For efficiency if a file hasn't been changed at a commit, rather then storing the file again, Git only stores a pointer to the last identical file in the previous revision as in figure \ref{snapshot_git}.
+
+We can think of a Git repository as an ordered list of snapshots. As follows, version-control is simply done by creating snapshots (by committing) of our repository. To view differences (using the \texttt{git diff} command) Git simply looks up the difference between snapshots
 \begin{figure}[h]
 \includegraphics[width=0.8\textwidth]{snapshots_git.png}
 \centering
@@ -230,40 +291,71 @@ Git stores data differently to other major VCSs. Rather than storing for each fi
 \label{snapshot_git}
 \end{figure}
 \subsection{Git File structure}
-At each revision point in a Git repository we can think of data as a small file structure. Objects in a Git snapshot can either be blobs or trees: Blobs correspond to files whereas trees correspond to directories and subdirectories under the repository's root directory. At each point in the history of a repository Git stores a commit object, which stores the meta-data about that commit, for example: the author, the time committed. Furthermore, this commit object has pointer to a tree object, corresponding to the root directory of the repository as seen in figure \ref{commit-and-tree_git}. Furthermore, each tree can have a pointer to many more trees or blobs. Blobs, as they correspond to files, do not have any children. Each commit has a pointer to it's parent(s), except the initial commit which doesn't have parent(s).
+In Git, we can think of a repository as a small file structure (one for each snapshot). Objects in this file structure can either be \textit{blobs} or \textit{trees}: blobs correspond to files whereas trees correspond to directories and subdirectories under the repository's root directory. At each point in the history of a repository Git stores a commit object, which stores the meta-data (time committed, author) about that commit.
+
+Each commit object has pointer to a tree object, corresponding to the root directory of the repository at a given snapshot, as seen in figure \ref{commit-and-tree_git}. Each tree can have a pointer to many more trees or blobs, whereas blobs are leaf nodes. Each commit has a pointer to it's parent(s), except the special initial commit which does not have parents.
 \begin{figure}[h]
 \includegraphics[width=0.8\textwidth]{commit-and-tree_git.png}
 \centering
-\caption{Git file-structure for a given commit}
+\captionsetup{width=0.8\textwidth}
+\caption[Git file-structure for a given commit.]{Git file-structure for a given commit. Figure taken from https://git-scm.com/book/.}
 \label{commit-and-tree_git}
 
 \end{figure}
 \subsection{Branches in Git}\label{gitbranches}
-Branches are an important feature of Git, but they make mining repositories harder, as they introduce new problems to be tackled. They allow a non-linear development in a decentralised manner, meaning that developments can make their own changes locally, and later join/merge these changes together. 
+Branches are an important feature of Git, but they make mining repositories harder, as they introduce new problems to be tackled. They allow non-linear development in a decentralised manner, meaning that developments can make their own changes locally, and later join/merge these changes together. 
 
-As each commit is simply an object with some meta-data, which stores a pointer to a snapshot, a branch is simply a pointer to one of these commits. The branch named "master" is the default branch (although this can be changed), after initialising a repository you are given a "master" branch which will store a pointer to the latest commit made. When a new branch is created, Git creates a new pointer to the commit viewed at that moment. Git knows which branch is active at any time by storing a special pointer called "HEAD" which is a pointer to the active branch object.
+As discussed before each commit is simply an object with some meta-data, which stores a pointer to a snapshot. A branch is simply a pointer to one of these commits.
+
+The branch named `master' is the default branch (although this can be changed); after initialising a repository you are given a `master' branch which will store a pointer to the latest commit made. When a new branch is created, Git creates a new pointer to the commit viewed at that moment. Git knows which branch is active at any time by storing a special pointer called `HEAD' which is a pointer to the active branch.
 \begin{figure}[ht!]
 \includegraphics[width=0.8\textwidth]{basic-branching_git.png}
 \centering
 
 \captionsetup{width=0.8\textwidth}
-\caption[Basic branching in Git]{Basic branching in git, with two branches: `master` and `iss53`.}
+\caption[Basic branching in Git]{Basic branching in git, with two branches: `master' and `iss53'. Figure taken from https://git-scm.com/book/.}
 \label{basic-branching_git}
 \end{figure}
 
-It is possible to diverge two branches, as seen in figure \ref{basic-branching_git}. There starting from commit C2, some changes were made on branch `master` which resulted in commit C4. Then, from C2 also some changes were made on branch `iss53`, which resultsed in branches C3 and C5. We can see from the diagram that C4 and C3 have the same parent, C2.
+\subsubsection*{Diverging branches}
+It is possible to diverge two branches, as seen in figure \ref{basic-branching_git} above. There starting from commit C2, some changes were made on branch `master' which resulted in commit C4. Then, from C2 also some changes were made on branch `iss53', which resultsed in branches C3 and C5. We can see from the diagram that C4 and C3 have the same parent, C2.
 
-Following this logic, you can also merge two branches, that is for example include the changes (that is the set of commits) made on branch B1 to the changes made on B2. If B1 and B2 are on the same linear path, we can simply fast forward, that is point the pointer of B1 to the same place when B2 is pointing. Otherwise, we need a real merge, which can be tricky to do automatically. There are two cases here:
+\subsubsection*{Merging branches}
+Following this logic, you can also merge two branches, that is for example include the changes (that is the set of commits) made on branch `iss53' to the changes made on `master'. If the two branches are on the same linear path, we can simply `fast-forward', that is point the pointer of `master' to the same place when `iss53' is pointing. Otherwise, we need a real merge, which can be tricky to do automatically.
+
+Figure \ref{basic-merging_git} shows how merging works in Git. We are merging `iss53' into `master', so the commit C5 has to appear on the `master' path as well.
+\begin{figure}[ht!]
+\includegraphics[width=0.8\textwidth]{basic-merging_git.png}
+\centering
+
+\captionsetup{width=0.8\textwidth}
+\caption[Merging branches in Git]{Merging `iss53' branch into the `master' branch. Figure taken from https://git-scm.com/book/.}
+\label{basic-merging_git}
+\end{figure}
+
+When performing a merge, there are two possibilities:
 \begin{enumerate}
-\item There are no merge conflicts. This means that there is no single file which were changed/overwritten on both branches. In this case Git will handle merging automatically through a so-called "recursive-merging" algorithm.
-\item There are merge conflicts. This means that there is at least file which has been modified by both branches B1 and B2. In this case Git will merge the files that it is able to merge, and for those where the conflict arose it will place some readable text to tell the user where the conflict is. The user will have to manually go to each file and resolve the conflict, and commit the new changes later. There exist automated tools for merge-conflict resolution, which automate the last two steps during the merging command itself.
+\item There are no merge-conflicts. This means that there is no single file which were changed/overwritten on both branches. In this case Git will handle merging automatically through a so-called ``recursive-merging'' by default.
+\item There are merge-conflicts. This means that there is at least file which has been modified by both branches `master' and `iss53'. In this case Git will merge the files that it is able to merge, and for those where the conflict arose it will place some readable text to tell the user where the conflict is. The user will have to manually go to each file and resolve the conflict, and commit the new changes later. There exist automated tools for merge-conflict resolution, which automate the last two steps during the merging command itself.
 \end{enumerate}
 
-When a merge occurs Git will create an automated merge commit, which will contain the information about the which commits were merged together, that is this commit will have at least two parents. The changes contained by a merge commit are also visible on the branch they were really made, this is an important feature if you want to view the repository as a linear history of commits. 
+When a merge occurs Git will create an automated merge commit, as seen in figure \ref{basic-merging_git}. If there are no merge-conflicts (as seen above) a new C5 merge-commit is created which will contain the same changes which were made at C5, but it will have two parents: C5 on `iss53' and C4 on `master'. If there are merge conflicts, our new merge-commit will contain the changes which resolved that conflict.
+\clearpage
+A key difference between Git and other VCS is that in Git we can treat the repository as a Directed Acyclic Graph (DAG) of commits, as the branching data is preserved, as we can see in figure \ref{branching}
+\begin{figure}[h]
+\includegraphics[width=0.8\textwidth]{branching.png}
+\centering
 
-As each commit can be a parent of one or more commits and similarly each commit can have zero ore commits we can treat the history of a repository as a Directed Acyclic Graph (DAG). This is a big difference between other VCS softwares as in non-distributed VCS branching is harder to achieve, and once we have it it is quite hard to backtrack which branches were used by which user and when[need better explanation+reference here]. The DAG representation comes handy when analysing different user activities, but it introduces several new problems, because when we are mining a repository we might want to check each path in a repository. 
+\captionsetup{width=0.8\textwidth}
+\caption[Comparing Git branching with other VCS]{Comparing Git branching with other VCS. (a) is the DAG produced by git, while (b) is the linear history produced by SVN. Figure taken from \cite{Git}}
+\label{branching}
+\end{figure}
 
-It is also possible to view each branch as a linear set of commits (even when some branches were merged into this branch). Commits will appear in their order of committed time, regardless on which branch were they made. This linear representation will also contain all the merge commits, which will be the ones with at least two parents. This means, that when going through this history merged changes will be visible twice: once in their original commit (made on some branch B1) and once in the merge commit of branches B1 and B2 say.
+Alice's merge commit will have two parents: Alice's second commit and Bob's second commit, thus preserving the DAG information, which is lost in SVN. This DAG representation comes handy when analysing different user activities, but it introduces several new problems, because when we are mining a repository we might want to check each path in a repository. 
+
+Luckily, it is also possible to view each branch as a linear set of commits (even when some branches were merged into this branch). We simply take each commit in the DAG and order them by their committed time, regardless on which branch were they made.
+
+However, this linear representation will contain duplicates (when there are no merge-conflicts), as seen in figure \ref{basic-branching_git}:  C5 will appear twice in our linear representation, once as a merging commit and once as a part of `iss53'. We will use this linear representation when implementing \fxch{}.
 \section{GitPython}
 
 \subsection{Overview}
@@ -277,23 +369,21 @@ GitPython\footnote{https://github.com/gitpython-developers/GitPython} is a pytho
 
 \begin{figure}[h]
 \includegraphics[width=1.0\textwidth]{db_backend-1.png}
-\caption{Showing time-to-run of backends \texttt{GitDB} (version\_5) and \texttt{GitCmdObjectDB} (version\_6) for boto.git repository}
+\includegraphics[width=1.0\textwidth]{db_backend-2.png}
+
+\captionsetup{width=0.95\textwidth}
+\caption{Showing time-to-run of backends \texttt{GitDB} (version\_5) and \texttt{GitCmdObjectDB} (version\_6) for repositories boto.git and facebook-sdk.git.}
 \label{boto_gitdb}
 \end{figure}
-
 Behind the scenes GitPython is using gitdb\footnote{https://github.com/gitpython-developers/gitdb} for accessing a git reposiotry. This is an efficient way of accessing data, as gitdb only operates on streams of data rather than the whole objects, so it actually requires small amount of memory. There are two options here, either we use the default \texttt{GitDB} (implemented by the gitdb package) or the \texttt{GitCmdObjectDB} which was only added to the GitPython. The first one, according to the Thiel \textit{"uses less memory when handling huge files, but will be 2 to 5 times slower when extracting large quantities
 small of objects from densely packed repositories"} while second one \textit{"uses persistent git-cat-file instances to read repository information. These operate very fast under all conditions, but will consume additional memory for the process itself. When extracting large files, memory
 usage will be much higher than the one of the \texttt{GitDB}"}.
-\begin{figure}[h]
-\includegraphics[width=1.0\textwidth]{db_backend-2.png}
-\caption{Time-to-run of backends \texttt{GitDB} (version\_5) and \texttt{GitCmdObjectDB} (version\_6) for facebook-sdk.git repository.}
-\label{facebook-sdk_gitdb}
-\end{figure}
 
-Figure \ref{facebook-sdk_gitdb} and \ref{boto_gitdb} show the time-to-run in seconds for both. As it can be seen, there is not a significant difference in the running time, so the default (\texttt{GitDB}) back-end was used for all further analyses.
+
+Figure \ref{boto_gitdb} shows the time-to-run in seconds for both. As it can be seen, there is not a significant difference in the running time, so the default (\texttt{GitDB}) back-end was used for all further analyses.
 \cleardoublepage
 \chapter{Implementation}
-This chapter summarizes the main components implemented to run \fxch{}. It first explores a very high level view of all modules, and then it describes all components in more detail, together with any implementation difficulties.
+This chapter explained the main components implemented to run \fxch{}. It first explores a very high level view of all modules, and then it describes all components in more detail, together with any implementation difficulties. Finally, this chapter will talk about the bottleneck of the first implementation, and how this bottleneck was tackled to achieve a speed-up.
 \section{Design overview}
 
 The algorithm is implemented in Python using its 2.7.6 release. The implementation has several modules which handle different parts of the algorithm. The main module is the Repository which implements the algorithm itself. It uses several back-end modules, such as Parsing, File management and Cache. Figure \ref{fixcache_flowgraph} on the next page shows these main modules and how do these modules depend on each other.
@@ -311,7 +401,6 @@ The algorithm is implemented in Python using its 2.7.6 release. The implementati
 \paragraph{Cache module}This module contains the \texttt{Cache} class which represents our cache when running \fxch{} in our \texttt{repository} module. Instances of this class will store how good the algorithm is, that is they will keep track of number of hits and number of misses. The Repository module will send new files to our Cache module, which will handle additions to cache, and removals if the cache is filled. The removals are handled implicitly, hence the one-way line in figure \ref{fixcache_flowgraph}.
 
 \paragraph{Repository module}This is the main module which runs \fxch{} itself. It communicates with all the other modules (requesting existing files, adding new files, updating the cache, parsing data), and handles the communication of these module between themselves. Also it will read the the Git repository (through GitPython on which we are currently running \fxch{} itself. The communication of Repository with other modules differ by module. In the figure \ref{fixcache_flowgraph} the striped line means that there are no \texttt{File} or \texttt{FileDistance} (these are described later) instances involved. The continuous line on the other hand, means that we are sending and receiving these objects from other modules. For example, Repository will request \texttt{File} and \texttt{FileDistance} objects based on files' paths and File management will return the correct instances. Similarly, Repository will send new \texttt{File} instances for the Cache module to process, which will insert them into the cache itself.
-\clearpage
 \section{Back-end modules} Back-end modules are used by the Repository module, when running \fxch{}. They are the layer which handles the abstraction of objects and object metrics used by \fxch{}.
 \subsection{Parsing module}\label{parsing}
 The Parsing module parses data arriving from the Repository module, as it can be see in the figure \ref{parsing_module} representing the data-flow through the module. The three key functionalities implemented are: deciding whether a line is "important" or not; getting the numbers of deleted lines from the output of a \texttt{git diff} command; parsing the commit messages to identify fixing commits. 
@@ -325,7 +414,7 @@ The Parsing module parses data arriving from the Repository module, as it can be
 When identifying bug-introducing commits, we are using the SZZ algorithm\cite{SZZ} (explained in section \ref{szz}), which has a step of finding which lines are contributing to the bug. This algorithm has been criticised by Kim et al.\cite{KimZim} as when identifying these lines, they are all treated equal. This will ultimately introduce plenty of false positive lines, that is lines which were changed during a bug-fix but had no contribution to the bug whatsoever.
 \begin{figure}[h]
 \includegraphics[width=1.0\textwidth]{automatic_identification.jpg}
-\caption{Example of changes between revisions (3rd fix is a bug-fix change). Figure taken from \cite{KimZim}.}
+\caption[Example of changes between revisions.]{Example of changes between revisions (3rd fix is a bug-fix change). Figure taken from \cite{KimZim}.}
 \label{automatic_identification}
 \end{figure}
 
@@ -340,7 +429,7 @@ An essential part of the \fxch{} algorithm is identifying which lines were remov
 Our module will accept the output of a \texttt{git diff} command for each file in the commit, and it will parser this output to get the line numbers which were deleted in that \texttt{git diff} (where the difference is what changed between the commit and it's parent commit), that is the line numbers of all the lines starting with "\texttt{-}" in our \texttt{git diff}.
 \subsubsection*{Identifying bug-fixing commits}
 For each commit the algorithm looks at, we need to decide whether it is a fixing-commit or not. To identify these commits, we need to parse the commit message itself. If the commit message is accepted by any of the below regular expressions (following Sadowski et al.\cite{Sadowski}), we flag it as a bug-fixing commit. 
-\clearpage
+
 Regular expressions used to parse commit messages:
 \begin{itemize}
 \item \texttt{r'defect(s)?'}
@@ -430,9 +519,12 @@ The preprocessing step may also include sorting, if the cache is smaller than th
 \paragraph{Limiting the number of files}
 Internally, files are stored in Python \texttt{set()} object, which does not allow duplicates, but it does not have a size limit by default. To actually have a limit in our cache implementation, all addition methods first look up how many files are currently in the cache, and subtract that value from the cache size to get how big is the currently available space. Removing files works accordingly to this: if we need more space, we remove as many files as necessary to get it.
 \section{The Repository module}
-This module is the central element of the \fxch{} implementation. It is connecting all modules together, and uses them to run and analyse the algorithm for different repositories. A \texttt{repository.Repository} class is instantiated for each Git repository we want to run \fxch{} on. Also, this module has two more classes, used only for evaluation purposes. 
+This module is the central element of the \fxch{} implementation. It is connecting all modules together, and uses them to run and analyse the algorithm for different repositories. A \texttt{repository.Repository} class is instantiated for each Git repository we want to run \fxch{} on. Also, this module has two more classes, used only for evaluation purposes.
+
 \subsection{Implementing the SZZ algorithm}
-The SZZ algorithm in this implementation is implemented inside the \texttt{repository.Repository} class, rather than a standalone module, as it is a core part of \fxch{}. The two functions which are implementing it are:
+The SZZ algorithm in this implementation is implemented inside the \texttt{repository.Repository} class, rather than a standalone module, as it is a core part of \fxch{}. 
+\clearpage
+The two functions which are implementing it are:
 \begin{itemize}
 \item \texttt{\_get\_diff\_deleted\_lines(self, commit1, commit2)}
 
@@ -565,9 +657,9 @@ We need to have a binary min-heap, to keep track of what is the minimal item in 
 We can see on figure \ref{fig:speedup} on the next page, how good is fast did it take for \fxch{} to run for a given cache-ratio. The figure is showing two versions: version\_1 (with sorting) and version\_5 (with "select top $k$ from $n$), and its clear that version\_5 is faster.
 This speed-up is caused mainly by replacing sorting, as we will be using more linear operations (if $k >= n$) and $\mathcal{O}(n\log{k})$ operations, where for a single run $k$ is fix, and $n$ is changing.
 A reason for this speedup is that whenever we increase the cache-ratio we also increase the cache-size, and the bigger the cache size, the bigger the pre-fetch-size and distance-to-fetch, so we will fetch more files, hence our "get top k elemens from n objects" algorithm explained in \ref{gettopk} will run in $\mathcal{O}(1)$ time more often, as $k$ (the number of files we are fetching) will increase with $n$ unchanged.
-\subsection{Git diff with and without the --stat flag}
-The command git diff outputs the difference between two snapshots (commits for instance). Without any flags/options set it will output the line-by-line difference with some metadata at the beginning for each file. If the task is only to get the basic information of how files changed it is good to use the --stat flag. With this Git will only outputs which file has had lines deleted and/or added, and how many lines this was. This second is more efficient in the background, due to how diff is implemented (reference here??).
+\cleardoublepage
 \chapter{Evaluation}
+This chapter first introduces the repositories evaluated, and their properties. Then we will look at the results according to the evaluation method used by the original authors of \fxch{}. Finally, a new evaluation method is introduced, and two of the repositories are evaluated accordingly. 
 \section{Repositories analysed and evaluated}
 The algorithm was evaluated and analysed using five repositories: facebook-sdk.git\footnote{https://github.com/mobolic/facebook-sdk}, raspberryio.git\footnote{https://github.com/python/raspberryio}, boto3.git\footnote{https://github.com/boto/boto3}, boto.git\footnote{https://github.com/boto/boto} and django.git\footnote{https://github.com/django/django}. All these repositories were cloned, and \fxch{} was run on the locally: facebook-sdk.git was mainly used for testing purposes; raspberryio.git, boto3.git and boto.git was analysed completely; boto.git and django.git were used for evaluation. The repositories were chosen to have different number of commits, and to be mostly pure Python (except raspberryio.git which is only 43\% Python), also they have been used in earlier projects I was involved in, hence the idea to analyse them.
 
@@ -662,18 +754,22 @@ From this we can see that all changed files in [tHStart:tX] are equal to $TP \cu
 Where $\beta$ specifies whether we weight precision or recall higher.
 \end{enumerate}
 \subsection{Precision, recall and F\textsubscript{2} score}
-\begin{wrapfigure}{r}{0.5\textwidth}
-\includegraphics[width=0.48\textwidth]{Precisionrecall.png}
+\begin{figure}[ht!]
+\includegraphics[width=0.5\textwidth]{Precisionrecall.png}
+\centering
  \begin{minipage}{\linewidth}
     \caption[Precision and recall.]%
     {Precision and recall. Figure taken from Wikipedia\footnotemark.}
   \end{minipage}
   \label{precisionrecall}
-\end{wrapfigure}
+\end{figure}
 \footnotetext{https://en.wikipedia.org/wiki/Precision\_and\_recall}
 Out of the metrics above, we are mostly interested in precision, recall and F\textsubscript{2} score at each bug-fixing commit in our horizon. The figure \ref{precisionrecall} on the right shows these metrics in a Venn-diagram. In this diagram the \textit{relevant elements} corresponds to fixed-files (that is ones with bugs) whereas \textit{selected elements} corresponds to files in our cache. Following this, we can define precision as the ratio of \textit{selected and relevant} files and \textit{selected but not relevant} files and recall as the ratio of \textit{selected and relevant} files and \textit{relevant} files. That is precision is tells us the percentage of files in the cache which are indeed buggy at each bug-fixing commit in our horizon while recall tells us the percentage of correctly predicted buggy files. 
 
-As defined above the F\textsubscript{$\beta$} score weight precision and recall according to the parameter $\beta$. Since \fxch{} supposed to identify files which are `more likely to contain a bug in the future` recall should be weighted higher, as when finding buggy files it should be more important to correctly identify the biggest subset of truly faulty files than to have some false-positives, therefore F\textsubscript{2} score will be used for evaluation.
+As defined above the F\textsubscript{$\beta$} score weight precision and recall according to the parameter $\beta$. Since \fxch{} supposed to identify files which are `more likely to contain a bug in the future` recall should be weighted higher, as when finding buggy files it should be more important to correctly identify the biggest subset of truly faulty files than to have some false-positives, therefore F\textsubscript{2} score will be used for evaluation. After substituting 2 for $\beta$ we get that:
+\[
+	F_2 = \frac{5 * precision * recall}{4 * precision + recall} = \frac{5 * |TP|}{5 * |TP| + 4 * |FN| + |FP|}
+\]
 \subsection{Results}
 \subsubsection{Evaluating boto.git}
 \begin{figure}[ht!]
@@ -697,6 +793,24 @@ Figure \ref{evaluating_django} shows the same data as \ref{evaluating_boto} but 
 Again as with figure \ref{evaluating_boto} the metrics are higher for cache-ratio of 0.2 (even for precision this time). However, the difference between cache-ratios is much bigger for the $F_2$ score after the drop happens (here at $c_{12}$). We can see that the difference between $F_2$ scores for cache-ratio of 0.1 and 0.2 will be at least 0.2 after this point. This difference was never as dramatic in figure \ref{evaluating_boto}.
 
 Another key difference between this figure and figure \ref{evaluating_boto}: precision stays high for all the commits. That is, if a file is identified as a buggy-file here, it is likely to indeed be buggy: our cache indeed has faulty files in it. Other than this, recall also drops after the first two commits, after which it also climbs back to a peak at around 0.78 (here at $c_{12}$), and after this peak it will drop below 0.6, so it is slightly worse than recall for boto.git.
+\section{Summary}
+When evaluating our repositories over hit-rate several results were found to those of the original paper, however generally they were slightly lower on-average. The parameters for which we have the best hit-rate possible were also found to be close to the ones identified in the original paper.
+
+With the new evaluation technique, it has been found that \fxch{} as a predictor only performs well for the first few commits in the horizon (future) after, it's performance drops.
+\cleardoublepage
+\chapter{Conclusion}
+\section{Summary of work}
+This dissertation presents the work achieved by implementing and analysing \fxch{} on five open-source Python repositories on GitHub. The success criteria, as outlined in the project proposal was met, and all the components were completed on schedule. It was found, that Python repositories on GitHub perform slightly poorly in terms of \fxch{'s} hit-rate than the repositories outlined by Sunghun et al.\cite{FixCache}. It is yet to be discovered whether this difference is due to to Python itself, or the fact that this dissertation only looked at open-source public Git repositories.
+\section{How to use \fxch{}}
+As it could be seen in section 4.4 in the previous chapter, \fxch{} works only for the few first commits in the future in terms of precision (django.git is an exception here, where the precision was nearly always 1.0), recall and F\textsubscript{2} score. This means, that \fxch{} should not be used alone when making long-term bug-predictions, rather it should be re-run after each fixing commit (or even after each commit) to always have an up-to-date prediction file-set.
+
+When used for production, it would be best to use together with some other bug-prediction scheme, in order to maximise the number of correctly identified files. The algorithm itself is quite heavy-weight, for over 22 thousand commits of django.git, one run required up-to 3 hours to complete, so for large projects it might be only feasible to run it before deploying a huge change. As for the parameters, following the results identified I would recommend using a cache-ratio of 0.2, a pre-fetch-size of 0.1 and a distance-to-fetch of 0.5.
+\section{Further ideas}
+Further work could be done in getting even higher hit-rate, by doing a more sophisticated per line analysis of lines `which truly contribute to a bug` as discussed by Kim et al.\cite{KimZim}. 
+
+It would be also good to have an implementation of method-level \fxch{} for Git, in order to compare the results with what was found in that matter in the original paper.
+
+Finally, some other properties could be investigated: bug-density on a per day basis (ie. more bug prone days); whether there is a connection between the number of contributions and the number of introduced bugs for each user; is there a difference between bug-proneness of Python repositories on GitHub and repositories in other highly used languages (C/C++, Java).
 \addcontentsline{toc}{chapter}{Bibliography}
 \bibliography{refs}
 \end{document}
