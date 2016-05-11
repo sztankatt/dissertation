@@ -122,8 +122,8 @@ extent for a comparable purpose.
 \listoffigures
 
 \newpage
-\section*{Acknowledgments}
-I would like to thank my supervisor, Advait Sarkar, for his guidance and advises throughout the project. This work would have been much harder without his valuable and helpful feedback, comments and suggestions.
+\section*{Acknowledgements}
+I would like to thank my supervisor, Advait Sarkar, for his guidance and advices throughout the project. This work would have been much harder without his valuable and helpful feedback, comments and suggestions.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % now for the chapters
@@ -162,7 +162,7 @@ There are several approaches to bug prediction to date, which can be put into tw
 \label{bug_prediction_data}
 \end{figure}
 
-\paragraph{Single-version approaches}They use the current state of the repository and calculate variety of metrics  to predict faulty behavior. The most commonly used metric is the so-called Chidamber and Kremmer (CK) metrics suite\cite{295895}. It was proposed for Object-oriented programs (OOP), and it quantifies the state of a program using different data. For example, one metric is the \textit{Weighted Method Count per Class} (WMC): the sum of the \textit{complexities} of the methods in a class. The definition of the per method \textit{complexity} measure is left open by Chidamber and Kremmer, they only suggest it should be an additive property \cite{295895}.
+\paragraph{Single-version approaches}They use the current state of the repository and calculate variety of metrics  to predict faulty behaviour. The most commonly used metric is the so-called Chidamber and Kremmer (CK) metrics suite\cite{295895}. It was proposed for Object-oriented programs (OOP), and it quantifies the state of a program using different data. For example, one metric is the \textit{Weighted Method Count per Class} (WMC): the sum of the \textit{complexities} of the methods in a class. The definition of the per method \textit{complexity} measure is left open by Chidamber and Kremmer, they only suggest it should be an additive property \cite{295895}.
 
 There are several other OOP metrics used, which weren't suggested as a part of CK metrics. A simple example might be, the \textit{Lines Of Code} per file, or method (LOC).
 
@@ -178,7 +178,7 @@ Previous implementations \cite{FixCache}\cite{Sadowski}, except one \cite{Bugcac
 \section{Resources and Terminology}
 The \fxch{} implementation presented in this dissertation was tested, analysed and evaluated on a remote server machine, with two Intel Xeon E5-2620\footnote{http://ark.intel.com/products/64594/} processors with 64GB of RAM, running a Debian Linux.
 
-\fxch{} can be implemented for two different entities: files and methods. The first will identify buggy files, while the second will identify buggy methods. As this dissertation discusses only \fxch{} implemented for files as entities, each time I use the word `entity' it refers to a file.
+\fxch{} can be implemented for two differented entities: files and methods. The first will identify buggy files, while the second will identify buggy methods. As this dissertation discusses only \fxch{} implemented for files as entities, each time I use the word `entity' it refers to a file.
 
 In Git `revision and `commit' are different notions: the first refers to a pointer by which one can reference a Git object (for instance a commit or a branch), whereas the second is used when talking about commit-objects. In this dissertation I will use them as synonyms, whenever I write `revision' I mean `commit'.
 \cleardoublepage
@@ -233,9 +233,9 @@ Some examples of bug-fixing commit messages\footnote{All examples taken from ide
 \item \texttt{PEP8 fixes. Make sure that code is compliant with pep8 1.3.3.}
 \end{itemize}
 
-At each bug-fixing commit, for each file involved in that commit, we make a look-up in the cache. If a file is already in the cache, we note a \textbf{hit}. Otherwise we score a \textbf{miss}.
+At each bug-fixing commit, for each file involved in that commit, we make a lookup in the cache. If a file is already in the cache, we note a \textbf{hit}. Otherwise we score a \textbf{miss}.
 \subsubsection*{Hit-rate}
-Once we have the number of hits and misses, we can define \textbf{hit-rate}, as the ratio of hits over all look-ups, that is:
+Once we have the number of hits and misses, we can define \textbf{hit-rate}, as the ratio of hits over all lookups, that is:
 \vspace{0.2in}
 \[
 	\operatorname{hit-rate} = \frac{\#hits}{(\#misses + \#hits)}
@@ -262,7 +262,7 @@ To define `closeness', we first need to define the notion of distance between tw
 \vspace{0.2in}
 The $coocurrence(f_1, f_2, n)$ returns an integer: how many times were the files $f_1$ and $f_2$ used (committed) together from revision $0$ to revision $n$.
 
-This locality is only used when we lockup a file in our cache, and it is missed. This is similar to physical caches when we only load a new cache line into the cache when a cache-miss occurs. If a file (say $f_t$) is missed during a bug-fixing commit, we go back to the bug-introducing commit(s) and fetch the closest files to $f_t$ at each bug-introducing commit identified. We can identify the bug-introducing commits using the SZZ algorithm \cite{SZZ}.
+This locality is only used when we lookup a file in our cache, and it is missed. This is similar to physical caches when we only load a new cache line into the cache when a cache-miss occurs. If a file (say $f_t$) is missed during a bug-fixing commit, we go back to the bug-introducing commit(s) and fetch the closest files to $f_t$ at each bug-introducing commit identified. We can identify the bug-introducing commits using the SZZ algorithm \cite{SZZ}.
 
 It is important to understand the distinction between bug-fixing commits and bug-introducing commits. The former are identified by parsing the commit message, while the latter are identified by the SZZ algorithm.
 
@@ -320,7 +320,7 @@ We can think of a Git repository as an ordered list of snapshots. As follows, ve
 \label{snapshot_git}
 \end{figure}
 \subsection{Git File structure}
-In Git, we can think of a repository as a small file structure (one for each snapshot). Objects in this file structure can either be \textit{blobs} or \textit{trees}: blobs correspond to files whereas trees correspond to directories and sub-directories under the repository's root directory. At each point in the history of a repository Git stores a commit object, which stores the meta-data (time committed, author) about that commit.
+In Git, we can think of a repository as a small file structure (one for each snapshot). Objects in this file structure can either be \textit{blobs} or \textit{trees}: blobs correspond to files whereas trees correspond to directories and subdirectories under the repository's root directory. At each point in the history of a repository Git stores a commit object, which stores the meta-data (time committed, author) about that commit.
 
 Each commit object has pointer to a tree object, corresponding to the root directory of the repository at a given snapshot, as seen in figure \ref{commit-and-tree_git}. Each tree can have a pointer to many more trees or blobs, whereas blobs are leaf nodes. Each commit has a pointer to it's parent(s), except the special initial commit which does not have parents.
 \begin{figure}[h]
@@ -347,7 +347,7 @@ The branch named `master' is the default branch (although this can be changed); 
 \end{figure}
 
 \subsubsection*{Diverging branches}
-It is possible to diverge two branches, as seen in figure \ref{basic-branching_git} above. There starting from commit C2, some changes were made on branch `master' which resulted in commit C4. Then, from C2 also some changes were made on branch `iss53', which resulted in branches C3 and C5. We can see from the diagram that C4 and C3 have the same parent, C2.
+It is possible to diverge two branches, as seen in figure \ref{basic-branching_git} above. There starting from commit C2, some changes were made on branch `master' which resulted in commit C4. Then, from C2 also some changes were made on branch `iss53', which resultsed in branches C3 and C5. We can see from the diagram that C4 and C3 have the same parent, C2.
 
 \subsubsection*{Merging branches}
 Following this logic, you can also merge two branches, that is for example include the changes (that is the set of commits) made on branch `iss53' to the changes made on `master'. If the two branches are on the same linear path, we can simply `fast-forward', that is point the pointer of `master' to the same place when `iss53' is pointing. Otherwise, we need a real merge, which can be tricky to do automatically.
@@ -392,7 +392,7 @@ However, this linear representation might contain duplicates in Git (for the mer
 \section{GitPython}
 
 \subsection{Overview}
-GitPython\footnote{https://github.com/gitpython-developers/GitPython} is a Python package developed by Sebastian Thiel\footnote{https://github.com/Byron} as a pure Python high-level tool for interacting with Git repositories. It provides a mechanism for reading and writing Git objects by using Python code. Also it allows us to use Git functionality (creating new repositories, committing changes, checking-out branches etc.) through function calls in Python.
+GitPython\footnote{https://github.com/gitpython-developers/GitPython} is a Python package developed by Sebastian Thiel\footnote{https://github.com/Byron} as a pure Python high-level tool for interacting with Git repositories. It provides a mechanism for reading and writing Git objects by using Python code. Also it allows us to use Git functionality (creating new repositories, commiting changes, checking-out branches etc.) through function calls in Python.
 
 When implementing \fxch{}, GitPython will only be used to access for the following tasks:
 \begin{itemize}
@@ -407,10 +407,10 @@ When implementing \fxch{}, GitPython will only be used to access for the followi
 \includegraphics[width=1.0\textwidth]{db_backend-2.png}
 
 \captionsetup{width=0.95\textwidth}
-\caption{Showing time-to-run of back-ends \texttt{GitDB} (version\_5) and \texttt{GitCmdObjectDB} (version\_6) for repositories boto.git and facebook-sdk.git when \fxch{} is run for different cache-ratios. Here cache-size is computed directly from the cache-ratio, which will be explained in Chapter 3 in detail.}
+\caption{Showing time-to-run of backends \texttt{GitDB} (version\_5) and \texttt{GitCmdObjectDB} (version\_6) for repositories boto.git and facebook-sdk.git when \fxch{} is run for different cache-ratios. Here cache-size is computed directly from the cache-ratio, which will be explained in Chapter 3 in detail.}
 \label{boto_gitdb}
 \end{figure}
-Behind the scenes GitPython is using a Git object database when accessing a Git repository. We have two options provided by GitPython: either we use the default \texttt{GitDB} (first implemented in the package gitdb\footnote{https://pypi.python.org/pypi/gitdb}, then added to GitPython) or we use \texttt{GitCmdObjectDB}. The first one, according to the Thiel \textit{"uses less memory when handling huge files, but will be 2 to 5 times slower when extracting large quantities
+Behind the scenes GitPython is using a Git object database when accessing a Git repository. We have two options provided by GitPythonw: either we use the default \texttt{GitDB} (first implemented in the package gitdb\footnote{https://pypi.python.org/pypi/gitdb}, then added to GitPython) or we use \texttt{GitCmdObjectDB}. The first one, according to the Thiel \textit{"uses less memory when handling huge files, but will be 2 to 5 times slower when extracting large quantities
 small of objects from densely packed repositories"} while second one \textit{"uses persistent git-cat-file instances to read repository information. These operate very fast under all conditions, but will consume additional memory for the process itself. When extracting large files, memory
 usage will be much higher than the one of the \texttt{GitDB}"}.
 
@@ -546,10 +546,10 @@ The Distance-database is also important when determining which files are the clo
 \subsection{Cache implementation}
 \fxch{} uses the notion of a file cache, which has some limited number of files in it. We can think of it as a bucket, where we can put some files in, and when the bucked is filled, it will automatically remove some files in order to make space for new arrivals. The \texttt{cache.Cache} class is responsible for keeping track of files which are in the cache, it also counts cache-hits  and cache-misses, and as mentioned before, it will remove files when the cache is filled (according to the LRU policy). The figure \ref{cache_module} shows the cache handles the addition of new files.
 
-\paragraph{Pre-processing}
+\paragraph{Preprocessing}
 Before putting the files into the cache, there is a pre-processing step, which will check if either of the files is already in our cache. If so, we will simply discard those files to avoid duplicates. This step is important as our cache needs to know exactly how much free space is required upon new arrivals.
 
-The pre-processing step may also include sorting, if the cache is smaller than the number of files we want to insert. In this case, we need to sort them so that later they obey the LRU cache-replacement policy.
+The preprocessing step may also include sorting, if the cache is smaller than the number of files we want to insert. In this case, we need to sort them so that later they obey the LRU cache-replacement policy.
 \begin{figure}[h]
 \centering
     \includegraphics[width=0.75\textwidth]{cache_module.png}
@@ -557,7 +557,7 @@ The pre-processing step may also include sorting, if the cache is smaller than t
   \label{cache_module}
 \end{figure}
 
-\paragraph{Adding new files} After pre-processing we can add the arriving files to our cache. We first look-up how much space do we need, and remove files accordingly. Once the required space has been freed, we can safely add the new arrivals.
+\paragraph{Adding new files} After preprocessing we can add the arriving files to our cache. We first look-up how much space do we need, and remove files accordingly. Once the required space has been freed, we can safely add the new arrivals.
 
 \paragraph{Removing files} We are not removing any files explicitly. The implementation itself will take care of clean-up, so that it will only discard files when our cache needs more space. As we are using the LRU cache-replacement policy, if we need a space of $k$ files, this module will select the top $k$ least recently used (changed/committed) files and remove them from the cache.
 
@@ -593,7 +593,7 @@ To calculate the variable file-count-at-last-commit we need to traverse the Git 
 
 Rather than using percentages, this implementation for both distance-to-fetch and pre-fetch-size uses between 0.0 and 1.0. Also, they are not ratios of file-count-at-last-commit, but rather of cache-size. That is if file-count-at-last-commit is 100, cache-ratio is 0.1 and distance-to-fetch is 0.5, then the cache-size is 10 ($100*0.1$) and we will fetch $10*0.5 = 5$ number of files each time we use our spatial locality.
 
-\subsection{Initialising commits} In Git each commit's identifier is a 40-digit long hexadecimal number generated by SHA-1 from the commit data, it is impossible to know just from the hash value what is the order of commits. Our \fxch{} is using integers as commit identifiers (the bigger the commit number, the later it happened), so a dictionary needs to initialised prior to running our algorithm. We first iterate through the list of commits (which is provided by GitPython) and at each commit we store the hash value of that commit as key, and it's order in the list as the value. Each time we want to access the order of any commit object, we can look-up this dictionary.
+\subsection{Initialising commits} In Git each commit's identifier is a 40-digit long hexadecimal number generated by SHA-1 from the commit data, it is impossible to know just from the hash value what is the order of commits. Our \fxch{} is using integers as commit identifiers (the bigger the commit number, the later it happened), so a dictionary needs to initialised prior to running our algorithm. We first iterate through the list of commits (which is provided by GitPython) and at each commit we store the hash value of that commit as key, and it's order in the list as the value. Each time we want to access the order of any commit object, we can lookup this dictionary.
 \clearpage
 \subsection{Running \fxch{}}
 \begin{wrapfigure}{r}{0.5\textwidth}
@@ -720,7 +720,7 @@ Following the previous examples, here we fix the cache-ratio, and are interested
 We store all the results, for each analysis in .csv files. Once the .csv files were created, we read them and display the data using the matplotlib\footnote{http://matplotlib.org/} Python library. The Graph module is responsible for reading, and displaying the .csv files created by our Analysis module, as .png images using matplotlib.
 \section{Evaluation over hit-rate}
 \subsection{Results}
-In the original paper \fxch{} was evaluated and analysed against hit-rate, that is the ratio of cache hits over all cache look-ups. It was found for several projects (such as Apache1.3, PostgreSQL, Mozilla and others in \cite{FixCache}) that hit-rate is between 0.65 and 0.95 for cache-ratio of 0.1, pre-fetch-size of 0.1 and distance-to-fetch of 0.5.
+In the original paper \fxch{} was evaluated and analysed against hit-rate, that is the ratio of cache hits over all cache lookups. It was found for several projects (such as Apache1.3, PostgreSQL, Mozilla and others in \cite{FixCache}) that hit-rate is between 0.65 and 0.95 for cache-ratio of 0.1, pre-fetch-size of 0.1 and distance-to-fetch of 0.5.
 \begin{figure}[h]
 \includegraphics[width=1.0\textwidth]{plot_several.png}
 \caption[Evaluation of \fxch{} according to hit-rate for different repositories.]{Evaluation of \fxch{} according to hit-rate for different repositories. Vertical dashed-line at cache-ratio of 0.1.}
@@ -782,7 +782,7 @@ Evaluating over hit-rate leaves several questions open, for example ``Is \fxch{}
 \end{figure}
 
 \subsection{Methodology}
-As mentioned before, we run \fxch{} for each repository, but we stop at tNow*0.9 number of commits (the window). By default when performing such an evaluation (using \texttt{evaluation} module's \texttt{evaluate\_repository} method) our default parameters are: window-ratio of 0.9, cache-ratio of 0.1, pre-fetch-size of 0.1 and distance-to-fetch of 0.5.
+As mentioned before, we run \fxch{} for each repository, but we stop at tNow*0.9 number of commits (the window). By default when performing such an evaluation (using \texttt{evaluation} module's \texttt{evaluate\_repository} mehtod) our default parameters are: window-ratio of 0.9, cache-ratio of 0.1, pre-fetch-size of 0.1 and distance-to-fetch of 0.5.
 
 At the time we stop, we have some files in our cache, and this cache would be left unchanged as we walk through our horizon, lets call the set of files in the cache $CH$. Let tHStart = tNow*0.9, then at each point tX in our horizon (that is $\forall c_{tX} \in \{c_{tHStart}, \dots, c_{tNow}\}$ we can define the following two sets:
 \begin{itemize}
